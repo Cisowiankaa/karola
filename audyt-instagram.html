@@ -84,6 +84,9 @@
     border-radius:3px;padding:20px 18px;margin-bottom:14px;
   }
   .alarm.amber{border-left-color:var(--warn);}
+  .alarm.good{border-left-color:var(--ok);}
+  .alarm.good .tag{color:var(--ok);}
+  .alarm.good .ev dt{color:var(--ok);}
   .alarm h3{
     font-size:20px;line-height:1.18;letter-spacing:-.02em;font-weight:800;margin:8px 0 12px;text-wrap:balance;
   }
@@ -223,15 +226,15 @@
     </div>
 
     <div class="vitals">
-      <div class="vital"><span class="v">10,1%</span><span class="k">ER na lajkach</span></div>
+      <div class="vital"><span class="v">20,8%</span><span class="k">lajki / wyświetlenia</span></div>
+      <div class="vital"><span class="v">29,4%</span><span class="k">widz → obserwator</span></div>
       <div class="vital"><span class="v">174:1</span><span class="k">lajki / komentarz</span></div>
-      <div class="vital"><span class="v">0</span><span class="k">Twoich twarzy</span></div>
     </div>
 
     <div class="banner">
-      <p class="eyebrow">Czego tu nie ma — i dlaczego</p>
-      <p>Prosiłaś o <strong>wyświetlenia, zapisy i udostępnienia</strong>. Nie ma ich w tym raporcie, bo nie mam do nich dostępu — publiczne API Instagrama oddaje wyłącznie lajki i komentarze. Zapisy i udostępnienia żyją tylko w Twoich <strong>Statystykach w aplikacji</strong>.</p>
-      <p>Nie zamierzam ich zmyślać. Ranking niżej stoi na lajkach i komentarzach — i zaraz zobaczysz, dlaczego to i tak nie jest największy problem.</p>
+      <p class="eyebrow">Skąd te liczby</p>
+      <p>Podpięte API dało lajki i komentarze z 73 publikacji. Twoje <strong>Statystyki z aplikacji</strong> dołożyły wyświetlenia — <span class="num">130 956</span> w 90 dniach, <span class="num">10 381</span> widzów, <span class="num">+3 056</span> obserwatorów.</p>
+      <p>Nadal brakuje <strong>zapisów i udostępnień w rozbiciu na posty</strong> — to zakładka „Zawartość", nie „Ogólne". Bez nich ranking niżej stoi na lajkach i komentarzach. Żadnej liczby tu nie oszacowałem.</p>
     </div>
   </header>
 
@@ -244,12 +247,13 @@
       <span class="tag">Alarm 01 · Wiarygodność danych</span>
       <h3>174 lajki na jeden komentarz</h3>
       <dl class="ev">
-        <dt>174:1</dt><dd>Twój stosunek lajków do komentarzy. Zdrowe konto tej wielkości: <strong>20–50:1</strong>.</dd>
-        <dt>10,1%</dt><dd>ER na lajkach przy 5 tys. obserwujących. Realny organiczny sufit w tej tematyce: <strong>3–6%</strong>.</dd>
+        <dt>20,8%</dt><dd>Twoich wyświetleń kończy się lajkiem. Post feed: <strong>3 211 wyświetleń, 668 lajków</strong>. Norma organiczna: <strong>3–8%</strong>.</dd>
+        <dt>174:1</dt><dd>stosunek lajków do komentarzy. Zdrowe konto tej wielkości: <strong>20–50:1</strong>.</dd>
         <dt>19/73</dt><dd>postów ma <strong>zero</strong> komentarzy — przy średniej 505 lajków na post.</dd>
         <dt>12</dt><dd>najwyższa liczba komentarzy, jaką kiedykolwiek zebrał Twój post. Rekord lajków: 1074.</dd>
       </dl>
-      <p>Prawdziwi ludzie piszą. Tysiąc osób, które lajkują, a nie odzywa się ani jedna — to nie jest publiczność, to jest ruch.</p>
+      <p>To jest ta liczba, która przesądza sprawę. Co piąte wyświetlenie zamienia się w lajk — trzy do siedmiu razy powyżej tego, co robi naprawdę dobra treść. A jednocześnie prawie nikt nie pisze komentarza.</p>
+      <p>Ludzie, którzy klikają serce, ale nigdy nie piszą ani słowa, nie oglądają Twoich treści. Oni je <strong>odklikują</strong>.</p>
       <p>W czterech rolkach masz hashtagi <strong>#zasięgi #zasiegi</strong>. To znacznik grup podbijających zasięgi. Sama je tam wpisałaś — więc oboje wiemy, skąd część tych liczb pochodzi.</p>
     </div>
 
@@ -277,36 +281,64 @@
         </div>
       </div>
       <p>Osiem rolek zebrało kolejno: <span class="num">16, 7, 4, 4, 3, 3, 2, 0</span> lajków. Przy 5 012 obserwujących.</p>
-      <p>Rolka z trzema lajkami znaczy, że Twoi obserwujący jej nie zobaczyli — albo że ich tam nie ma. Nie ma trzeciej opcji. A skoro cztery inne rolki z tego samego konta zrobiły po 600–1000, to te cztery dostały z zewnątrz coś, czego pozostałe osiem nie dostało.</p>
-      <p><strong>To jest Twój prawdziwy zasięg organiczny: kilka lajków.</strong> Cała reszta to nadbudowa.</p>
+      <p>Statystyki tłumaczą dlaczego. Z <span class="num">130 956</span> wyświetleń w 90 dniach <strong>122 000 poszło na posty</strong> — czyli <strong>93%</strong>. Na wszystkie rolki razem zostało niecałe <span class="num">9 000</span>.</p>
+      <dl class="ev">
+        <dt>3 211</dt><dd>średnia wyświetleń na post w feedzie.</dd>
+        <dt>814</dt><dd>średnia wyświetleń na rolkę — <strong>czterokrotnie mniej</strong>.</dd>
+      </dl>
+      <p>Robisz rolki, bo „trzeba robić rolki". U Ciebie one po prostu nie działają — a każda zabiera czas, który zwróciłby się w karuzeli.</p>
+    </div>
+
+    <div class="alarm">
+      <span class="tag">Alarm 03 · Wzrost</span>
+      <h3>Urosłaś o 156% i straciłaś zasięg</h3>
+      <dl class="ev">
+        <dt>+3 056</dt><dd>obserwatorów netto w 90 dni. Z <strong>1 956 na 5 012</strong> — wzrost o 156%.</dd>
+        <dt>10 381</dt><dd>widzów w tym samym czasie. Czyli <strong>29,4%</strong> wszystkich, którzy Cię zobaczyli, zaczęło Cię obserwować. Norma: <strong>0,5–2%</strong>.</dd>
+        <dt>12,6</dt><dd>wyświetleń na jednego widza. Ta sama garstka kont ogląda wszystko, co wrzucasz.</dd>
+      </dl>
+      <p>Tu jest sprzeczność, której nie da się obejść. Przez te same 90 dni, w których <strong>potroiłaś liczbę obserwujących</strong>, Twój wykres wyświetleń spadł z 5,1 tys. dziennie do niemal zera.</p>
+      <p>Prawdziwi obserwatorzy działają odwrotnie: każdy nowy podnosi zasięg następnego posta. Jeśli dokładasz trzy tysiące ludzi, a zasięg leci w dół, to znaczy, że ci ludzie <strong>nie oglądają</strong>. Instagram to widzi szybciej niż Ty i przestaje pokazywać Cię komukolwiek.</p>
+      <p><strong>Te trzy tysiące obserwujących nie są aktywem. Są kosztem</strong> — obniżają wskaźnik, po którym algorytm ocenia, czy warto Cię dystrybuować.</p>
     </div>
 
     <div class="alarm amber">
-      <span class="tag">Alarm 03 · Marka</span>
+      <span class="tag">Alarm 04 · Marka</span>
       <h3>Nie ma Cię w Twoich własnych treściach</h3>
       <p>73 publikacje. Zero twarzy, zero gadającej głowy, zero rąk w kadrze, zero głosu. Wszystkie dziesięć najlepszych postów to zdjęcie produktu na blacie.</p>
       <p>Zdjęcie tej butelki może zrobić każdy. <strong>Zdjęcie Ciebie z tą butelką może zrobić tylko Ty.</strong> Sprzedajesz jedyną rzecz, której nikt nie skopiuje, i akurat jej nie pokazujesz.</p>
     </div>
 
     <div class="alarm amber">
-      <span class="tag">Alarm 04 · Wiarygodność recenzji</span>
+      <span class="tag">Alarm 05 · Wiarygodność recenzji</span>
       <h3>Recenzje, w których nic nigdy nie jest złe</h3>
       <p>Oceny, które wystawiłaś: <span class="num">9/10</span>, <span class="num">9,5/10</span>, <span class="num">4/5</span>. Ani jednego produktu, którego nie polecasz. Jeden post na dziesięć ma sekcję z wadami — i nawet tam „wadą" jest to, że <em>zapach jest zbyt subtelny</em>.</p>
       <p>Recenzentka, która nigdy nie mówi „nie kupuj", nie jest recenzentką. Jest kanałem dystrybucji materiałów prasowych — i widzowie wyczuwają to szybciej, niż myślisz.</p>
     </div>
 
     <div class="alarm amber">
-      <span class="tag">Alarm 05 · Pozycjonowanie</span>
+      <span class="tag">Alarm 06 · Pozycjonowanie</span>
       <h3>Algorytm nie wie, komu Cię pokazywać</h3>
       <p>W 6 miesięcy: proszek do prania, kosmetyki dla dzieci, świece do masażu, chusteczki nawilżane, krem do rąk, maść nagietkowa, płyn do paneli, kapsułki do zmywarki, koreańska pielęgnacja.</p>
       <p>To cztery różne konta w jednym: <strong>sprzątanie</strong>, <strong>kosmetyki</strong>, <strong>dzieci</strong>, <strong>dom</strong>. Instagram uczy się, komu podsuwać Twoje treści, na podstawie tego, kto reaguje. Przy takim rozstrzale nigdy się nie nauczy.</p>
+    </div>
+
+    <div class="alarm good">
+      <span class="tag">To jednak działa · korekta</span>
+      <h3>Twoje posty naprawdę docierają do obcych ludzi</h3>
+      <dl class="ev">
+        <dt>55,7%</dt><dd>wyświetleń pochodzi od <strong>osób, które Cię nie obserwują</strong> — blisko 73 tys. w 90 dni. To zdrowy wynik dystrybucji.</dd>
+        <dt>3 211</dt><dd>średnia wyświetleń na post w feedzie. To jest realny zasięg, nie iluzja.</dd>
+      </dl>
+      <p>Zanim zobaczyłem Statystyki, napisałem, że Twój prawdziwy zasięg organiczny to kilka lajków. <strong>Myliłem się co do postów</strong> — one docierają do ludzi, i to w większości spoza Twoich obserwujących. Instagram podaje je dalej, bo tematy trafiają w wyszukiwania.</p>
+      <p>Zawyżone są <strong>reakcje i obserwatorzy</strong>, nie sam zasięg. To ważne rozróżnienie, bo znaczy, że warsztat i dobór tematów działają. Zepsuta jest warstwa, którą doklejasz na wierzch.</p>
     </div>
   </section>
 
   <section class="sect">
     <p class="eyebrow">Krok 2 · Ranking wg lajków + komentarzy (waga ×5)</p>
     <h2>TOP 10 — co naprawdę zadziałało</h2>
-    <p>Pasek pod numerem pokazuje wynik względem najlepszego postu. Czytaj to jako analizę <strong>rzemiosła</strong>, nie zasięgu — zasięgu, jak ustaliliśmy wyżej, nie znamy.</p>
+    <p>Pasek pod numerem pokazuje wynik względem najlepszego postu. Czytaj to jako analizę <strong>rzemiosła</strong>, nie zasięgu — wyświetlenia znam tylko zbiorczo dla konta, a zapisów i udostępnień per post wciąż nie mam.</p>
 
     <article class="card">
       <div class="card-top">
@@ -488,11 +520,11 @@
       <span class="tag">Rytm publikacji</span>
       <h3>Rozpędziłaś się i zgasłaś</h3>
       <dl class="ev">
-        <dt>24</dt><dd>publikacje w maju — Twój szczyt.</dd>
+        <dt>24</dt><dd>publikacje w maju — Twój szczyt. Wykres wyświetleń bije wtedy <strong>5,1 tys. dziennie</strong>.</dd>
         <dt>17</dt><dd>w czerwcu. Potem 9 w lipcu.</dd>
-        <dt>3</dt><dd>w sierpniu. Średnie lajki spadły z 691 do 200.</dd>
+        <dt>3</dt><dd>w sierpniu. Wyświetlenia dzienne <strong>przy zerze</strong>, średnie lajki z 691 na 200.</dd>
       </dl>
-      <p>Wykres jest jednoznaczny: przestałaś publikować i wynik natychmiast poszedł za tym. Cokolwiek napędza Twoje liczby, przestaje działać, gdy znikasz.</p>
+      <p>Wykres ze Statystyk to jedna długa równia w dół od połowy maja. Przestałaś publikować i wynik poszedł za tym natychmiast — bez żadnego bufora, jaki dałaby prawdziwa społeczność.</p>
     </div>
   </section>
 
@@ -501,7 +533,7 @@
     <h2>Sześć rzeczy, w tej kolejności</h2>
     <ol class="todo">
       <li><span class="n">1</span><div><h5>Odetnij sztuczne zasięgi</h5><p>Wypisz się z grup podbijających, usuń #zasięgi i #zasiegi. Przez pierwsze dwa tygodnie liczby runą i to jest cel — musisz zobaczyć swój prawdziwy punkt startu, żeby cokolwiek zmierzyć.</p></div></li>
-      <li><span class="n">2</span><div><h5>Przejdź na konto firmowe i otwórz Statystyki</h5><p>Wyświetlenia, zapisy i udostępnienia — to są jedyne metryki, które cokolwiek znaczą. Lajki nie. Bez tych danych następnym razem znowu policzymy nie to, co trzeba.</p></div></li>
+      <li><span class="n">2</span><div><h5>Zejdź z rolek na karuzele</h5><p>93% Twoich wyświetleń idzie na posty. Rolka robi średnio 814 wyświetleń, post 3 211, a karuzela ma najwyższe reakcje ze wszystkiego. Przestań wkładać czas w format, który u Ciebie nie działa.</p></div></li>
       <li><span class="n">3</span><div><h5>Wybierz jeden filar na 90 dni</h5><p>Cztery tematy naraz to cztery martwe konta. Twoje najlepsze rzemiosło jest w sprzątaniu — mocne haki, realne problemy, przeramowanie na rytuał. Zostań przy nim.</p></div></li>
       <li><span class="n">4</span><div><h5>Wejdź w kadr</h5><p>Ręce, głos, twarz — cokolwiek. Zacznij od dłoni myjącej brudną płytę. Nikt nie obserwuje butelki, ludzie obserwują ludzi.</p></div></li>
       <li><span class="n">5</span><div><h5>Pokazuj „przed", nie opisuj go</h5><p>Piszesz o tornadzie w kuchni i o szarej bieli, a publikujesz packshoty. Brud, plama, zaciek na kabinie — to jest darmowy materiał, który leży u Ciebie w domu. Sfilmuj brudne, potem czyste.</p></div></li>
@@ -512,16 +544,17 @@
   <section class="sect">
     <p class="eyebrow">Werdykt</p>
     <div class="verdict">
-      <p class="big">Umiesz pisać haki. <b>Nie masz publiczności.</b></p>
-      <p>„Jeden spray, kilka minut i kuchnia odzyskuje blask" oraz „aż do 22 myć" to zdania napisane przez kogoś, kto naprawdę czuje ten format. Rzemiosło jest — surowe, ale prawdziwe.</p>
-      <p>Problem w tym, że budujesz je na fundamencie, którego nie ma. Pięć tysięcy obserwujących, którzy zostawiają 212 komentarzy przez pół roku, i rolki po trzy lajki, kiedy nikt ich nie podbija — to nie jest społeczność, którą można zmonetyzować. Marki, które sprawdzą te liczby dokładniej niż Ty, zobaczą to samo, co ja zobaczyłem w piętnaście minut.</p>
-      <p><strong>Dobra wiadomość: masz sześć miesięcy pracy i konkretny warsztat. Zła: musisz zacząć liczyć od zera. Im później to zrobisz, tym droższe będzie odkręcanie.</strong></p>
+      <p class="big">Twoje treści działają. <b>Twoje statystyki nie.</b></p>
+      <p>To jest lepsza diagnoza, niż się spodziewałem po pierwszym podejściu. Posty robią po 3 200 wyświetleń, ponad połowa idzie do ludzi spoza obserwujących, a Instagram sam Cię podaje dalej. „Jeden spray, kilka minut i kuchnia odzyskuje blask" oraz „aż do 22 myć" to zdania kogoś, kto ten format czuje. <strong>Fundament jest.</strong></p>
+      <p>Zepsute jest to, co dokleiłaś na wierzch. Co piąte wyświetlenie kończy się lajkiem przy 174 lajkach na jeden komentarz. Trzy tysiące nowych obserwujących w kwartale, w którym zasięg spadł do zera. Te liczby nie idą razem i każdy, kto spojrzy uważniej, to zobaczy — marki sprawdzają dziś dokładnie te dwie proporcje.</p>
+      <p><strong>Najgorsze jest to, że sztuczna warstwa nie tylko nic nie daje — ona aktywnie tłumi to, co działa.</strong> Trzy tysiące kont, które nie oglądają, obniżają wskaźnik decydujący o Twojej dystrybucji. Płacisz zasięgiem za liczbę w nagłówku profilu.</p>
     </div>
 
     <p class="foot">
-      <b>Źródło danych:</b> publiczne API Instagrama przez Windsor.ai · 73 publikacje · 20.02–11.08.2026<br>
+      <b>Źródła:</b> publiczne API Instagrama przez Windsor.ai (73 publikacje, 20.02–11.08.2026) + Twoje Statystyki z aplikacji, zakładka Ogólne, 90 dni do 10.08.2026.<br>
       <b>Konto:</b> @karolina_atelier_ — nie @karolajna.86, które podałaś. To konto ma podpięty Twój adres e-mail, więc analizuję właśnie je.<br>
-      <b>Ranking:</b> lajki + (komentarze × 5). Wyświetlenia, zapisy i udostępnienia są niedostępne publicznie — żadna liczba w tym raporcie nie została oszacowana ani zmyślona.
+      <b>Ranking TOP 10:</b> lajki + (komentarze × 5). Wyświetlenia są dostępne tylko zbiorczo dla konta, nie per post — zapisy i udostępnienia są w zakładce „Zawartość", której jeszcze nie widziałem. Ranking może się po nich przetasować.<br>
+      <b>Normy porównawcze</b> (3–8% lajków na wyświetlenie, 0,5–2% konwersji na obserwatora, 20–50:1 lajki do komentarzy) to typowe zakresy dla kont lifestyle/beauty tej wielkości, nie oficjalne dane Instagrama. Żadna liczba w tym raporcie nie została oszacowana ani zmyślona.
     </p>
   </section>
 
