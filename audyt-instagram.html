@@ -113,6 +113,7 @@
   /* ---------- bimodal reels chart ---------- */
   .chart{
     background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:18px;margin:16px 0;
+    overflow-x:auto;
   }
   .bars{display:flex;align-items:flex-end;gap:5px;height:150px;margin:16px 0 8px;}
   .bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;position:relative;}
@@ -227,14 +228,14 @@
 
     <div class="vitals">
       <div class="vital"><span class="v">20,8%</span><span class="k">lajki / wyświetlenia</span></div>
-      <div class="vital"><span class="v">29,4%</span><span class="k">widz → obserwator</span></div>
-      <div class="vital"><span class="v">174:1</span><span class="k">lajki / komentarz</span></div>
+      <div class="vital"><span class="v">65:1</span><span class="k">lajki / zapis</span></div>
+      <div class="vital"><span class="v">8</span><span class="k">widzów relacji</span></div>
     </div>
 
     <div class="banner">
       <p class="eyebrow">Skąd te liczby</p>
       <p>Podpięte API dało lajki i komentarze z 73 publikacji. Twoje <strong>Statystyki z aplikacji</strong> dołożyły wyświetlenia — <span class="num">130 956</span> w 90 dniach, <span class="num">10 381</span> widzów, <span class="num">+3 056</span> obserwatorów.</p>
-      <p>Nadal brakuje <strong>zapisów i udostępnień w rozbiciu na posty</strong> — to zakładka „Zawartość", nie „Ogólne". Bez nich ranking niżej stoi na lajkach i komentarzach. Żadnej liczby tu nie oszacowałem.</p>
+      <p>Zakładka <strong>„Zawartość"</strong> dołożyła zapisy i udostępnienia dla sześciu ostatnich publikacji — i to one dały najtwardsze wnioski w tym raporcie. Żadnej liczby tu nie oszacowałem.</p>
     </div>
   </header>
 
@@ -302,11 +303,18 @@
       <p><strong>Te trzy tysiące obserwujących nie są aktywem. Są kosztem</strong> — obniżają wskaźnik, po którym algorytm ocenia, czy warto Cię dystrybuować.</p>
     </div>
 
-    <div class="alarm amber">
-      <span class="tag">Alarm 04 · Marka</span>
-      <h3>Nie ma Cię w Twoich własnych treściach</h3>
-      <p>73 publikacje. Zero twarzy, zero gadającej głowy, zero rąk w kadrze, zero głosu. Wszystkie dziesięć najlepszych postów to zdjęcie produktu na blacie.</p>
-      <p>Zdjęcie tej butelki może zrobić każdy. <strong>Zdjęcie Ciebie z tą butelką może zrobić tylko Ty.</strong> Sprzedajesz jedyną rzecz, której nikt nie skopiuje, i akurat jej nie pokazujesz.</p>
+    <div class="alarm good">
+      <span class="tag">Alarm 04 · Marka · KOREKTA</span>
+      <h3>Weszłaś w kadr — i to jest Twoja najlepsza treść</h3>
+      <p>Napisałem wcześniej, że w 73 publikacjach nie ma ani jednej Twojej twarzy. <strong>To była moja pomyłka</strong> — wyciągnąłem to z podpisów i metadanych, nie widząc zdjęć. W rolce „Koreańskie trio" jesteś przed kamerą.</p>
+      <p>I ta rolka bije wszystko inne w metryce, która naprawdę się liczy:</p>
+      <dl class="ev">
+        <dt>9</dt><dd>zapisów — <strong>więcej niż wszystkie inne posty razem po korekcie na zasięg</strong>. Reszta ma po 3–4.</dd>
+        <dt>76</dt><dd>zapisów i udostępnień na 1000 wyświetleń. Twój post z 2,2 tys. wyświetleń: <strong>5,5</strong>. To czternastokrotna różnica.</dd>
+        <dt>8,0%</dt><dd>lajków na wyświetlenie — <strong>jedyny wynik w normie</strong> (3–8%) w całym koncie. Reszta: 25–39%.</dd>
+      </dl>
+      <p>Ta rolka ma najmniej lajków ze wszystkiego (18) i jednocześnie najwięcej zapisów. To nie przypadek — to różnica między treścią, którą ktoś odklikuje, a treścią, którą ktoś <strong>chce zachować</strong>.</p>
+      <p><strong>Masz odpowiedź na pytanie „co robić dalej" i sama ją nagrałaś.</strong></p>
     </div>
 
     <div class="alarm amber">
@@ -338,7 +346,7 @@
   <section class="sect">
     <p class="eyebrow">Krok 2 · Ranking wg lajków + komentarzy (waga ×5)</p>
     <h2>TOP 10 — co naprawdę zadziałało</h2>
-    <p>Pasek pod numerem pokazuje wynik względem najlepszego postu. Czytaj to jako analizę <strong>rzemiosła</strong>, nie zasięgu — wyświetlenia znam tylko zbiorczo dla konta, a zapisów i udostępnień per post wciąż nie mam.</p>
+    <p>Pasek pod numerem pokazuje wynik względem najlepszego postu. To ranking <strong>po lajkach</strong>, czyli po metryce, której nie ufam — czytaj go jako analizę rzemiosła w podpisach. Właściwy ranking, po zapisach i udostępnieniach, jest <strong>niżej</strong> i wygląda zupełnie inaczej.</p>
 
     <article class="card">
       <div class="card-top">
@@ -502,6 +510,79 @@
   </section>
 
   <section class="sect">
+    <p class="eyebrow">Właściwy ranking · zakładka Zawartość, 6 ostatnich publikacji</p>
+    <h2>Po zapisach i udostępnieniach wygrywa co innego</h2>
+    <p>To jest ranking, o który prosiłaś na początku. Kolejność wychodzi <strong>odwrotna</strong> do tej po lajkach — a to dlatego, że lajki mierzą coś innego niż zamiar zakupu.</p>
+
+    <div class="chart">
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--line);">
+            <th style="text-align:left;padding:8px 6px 8px 0;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:500;">Publikacja</th>
+            <th style="text-align:right;padding:8px 6px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:500;">Wyśw.</th>
+            <th style="text-align:right;padding:8px 6px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:500;">Lajk %</th>
+            <th style="text-align:right;padding:8px 0 8px 6px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ok);font-weight:500;">Zap.+ud. /1000</th>
+          </tr>
+        </thead>
+        <tbody style="font-variant-numeric:tabular-nums;">
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);"><strong>Koreańskie trio</strong><br><span style="color:var(--ok);font-family:var(--f-mono);font-size:11px;">rolka · Twoja twarz</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">224</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--ok);">8,0%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--ok);font-size:16px;font-weight:600;">75,9</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">Sunny Care Orange<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">rolka · 4 dni</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">781</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">35,5%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--muted);font-size:16px;">15,4</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">Sunny Care Orange<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">rolka · 1 tydz.</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">779</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">39,4%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--muted);font-size:16px;">14,1</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">@equilibra_pl<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">post · 1 tydz.</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">1 300</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">31,3%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--muted);font-size:16px;">9,2</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">Maybelline Express<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">post · 4 tyg. · <strong style="color:var(--muted);">najwięcej wyświetleń</strong></span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">2 200</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">24,7%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--bad);font-size:16px;">5,5</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alarm">
+      <span class="tag">Alarm 07 · Zapisy</span>
+      <h3>65 lajków na jeden zapis</h3>
+      <dl class="ev">
+        <dt>24</dt><dd>zapisy łącznie na sześciu ostatnich publikacjach. Lajków w tym samym czasie: <strong>1 552</strong>.</dd>
+        <dt>0,14%</dt><dd>zapisów na wyświetlenie przy poście z 2,2 tys. zasięgu (3 zapisy). Zdrowa recenzja kosmetyczna: <strong>1–3%</strong>.</dd>
+      </dl>
+      <p>Prowadzisz konto recenzenckie. Zapis to jedyny sygnał, że ktoś naprawdę zamierza kupić — zapisuje, żeby wrócić w sklepie. <strong>Trzy zapisy na 2 200 wyświetleń oznaczają, że nikt nie traktuje tych recenzji jako podpowiedzi zakupowej.</strong></p>
+      <p>I to jest liczba, którą marka sprawdza przed podpisaniem współpracy — nie lajki.</p>
+    </div>
+
+    <div class="alarm">
+      <span class="tag">Alarm 08 · Relacje</span>
+      <h3>Twoje relacje ogląda osiem osób</h3>
+      <dl class="ev">
+        <dt>10 / 8 / 8</dt><dd>wyświetleń na trzech ostatnich relacjach. Przy <strong>5 012 obserwujących</strong>.</dd>
+        <dt>0,2%</dt><dd>obserwujących widzi Twoje relacje. Konto z żywą społecznością: <strong>5–15%</strong>.</dd>
+      </dl>
+      <p>Relacje to miejsce, gdzie widać prawdę o publiczności, bo Instagram pokazuje je głównie osobom, które już Cię obserwują. Nie ma tam algorytmicznej dystrybucji do obcych, która maskuje wynik w feedzie.</p>
+      <p><strong>Osiem wyświetleń na pięć tysięcy obserwujących to najczystszy dowód w całym tym raporcie.</strong> Reszta Twoich liczb jest sporna — ta nie.</p>
+    </div>
+  </section>
+
+  <section class="sect">
     <p class="eyebrow">Wzorce · cała próba 73 publikacji</p>
     <h2>Co dane mówią ponad rankingiem</h2>
 
@@ -530,14 +611,15 @@
 
   <section class="sect">
     <p class="eyebrow">Krok 3 · Plan naprawczy</p>
-    <h2>Sześć rzeczy, w tej kolejności</h2>
+    <h2>Siedem rzeczy, w tej kolejności</h2>
     <ol class="todo">
       <li><span class="n">1</span><div><h5>Odetnij sztuczne zasięgi</h5><p>Wypisz się z grup podbijających, usuń #zasięgi i #zasiegi. Przez pierwsze dwa tygodnie liczby runą i to jest cel — musisz zobaczyć swój prawdziwy punkt startu, żeby cokolwiek zmierzyć.</p></div></li>
       <li><span class="n">2</span><div><h5>Zejdź z rolek na karuzele</h5><p>93% Twoich wyświetleń idzie na posty. Rolka robi średnio 814 wyświetleń, post 3 211, a karuzela ma najwyższe reakcje ze wszystkiego. Przestań wkładać czas w format, który u Ciebie nie działa.</p></div></li>
       <li><span class="n">3</span><div><h5>Wybierz jeden filar na 90 dni</h5><p>Cztery tematy naraz to cztery martwe konta. Twoje najlepsze rzemiosło jest w sprzątaniu — mocne haki, realne problemy, przeramowanie na rytuał. Zostań przy nim.</p></div></li>
-      <li><span class="n">4</span><div><h5>Wejdź w kadr</h5><p>Ręce, głos, twarz — cokolwiek. Zacznij od dłoni myjącej brudną płytę. Nikt nie obserwuje butelki, ludzie obserwują ludzi.</p></div></li>
+      <li><span class="n">4</span><div><h5>Rób więcej tego, co w „Koreańskim trio"</h5><p>Ta rolka ma czternaście razy lepszy wynik zapisów na wyświetlenie niż Twój najszerzej dotarty post — bo jesteś w kadrze i mówisz. Nie eksperyment, tylko Twój nowy format bazowy.</p></div></li>
       <li><span class="n">5</span><div><h5>Pokazuj „przed", nie opisuj go</h5><p>Piszesz o tornadzie w kuchni i o szarej bieli, a publikujesz packshoty. Brud, plama, zaciek na kabinie — to jest darmowy materiał, który leży u Ciebie w domu. Sfilmuj brudne, potem czyste.</p></div></li>
       <li><span class="n">6</span><div><h5>Skrytykuj jeden produkt publicznie</h5><p>Ani jednej negatywnej opinii w 73 postach. Jedna szczera recenzja „nie kupuj tego" zbuduje więcej zaufania niż kolejne pięćdziesiąt dziewiątek na dziesięć.</p></div></li>
+      <li><span class="n">7</span><div><h5>Przestań patrzeć na lajki, zacznij na zapisy</h5><p>Jedyna liczba, którą warto śledzić tydzień do tygodnia: zapisy na 1000 wyświetleń. Twój punkt startu to 5–15. Rolka z Twoją twarzą zrobiła 76. Celuj w 20 na każdej publikacji.</p></div></li>
     </ol>
   </section>
 
@@ -547,13 +629,16 @@
       <p class="big">Twoje treści działają. <b>Twoje statystyki nie.</b></p>
       <p>To jest lepsza diagnoza, niż się spodziewałem po pierwszym podejściu. Posty robią po 3 200 wyświetleń, ponad połowa idzie do ludzi spoza obserwujących, a Instagram sam Cię podaje dalej. „Jeden spray, kilka minut i kuchnia odzyskuje blask" oraz „aż do 22 myć" to zdania kogoś, kto ten format czuje. <strong>Fundament jest.</strong></p>
       <p>Zepsute jest to, co dokleiłaś na wierzch. Co piąte wyświetlenie kończy się lajkiem przy 174 lajkach na jeden komentarz. Trzy tysiące nowych obserwujących w kwartale, w którym zasięg spadł do zera. Te liczby nie idą razem i każdy, kto spojrzy uważniej, to zobaczy — marki sprawdzają dziś dokładnie te dwie proporcje.</p>
-      <p><strong>Najgorsze jest to, że sztuczna warstwa nie tylko nic nie daje — ona aktywnie tłumi to, co działa.</strong> Trzy tysiące kont, które nie oglądają, obniżają wskaźnik decydujący o Twojej dystrybucji. Płacisz zasięgiem za liczbę w nagłówku profilu.</p>
+      <p><strong>Najgorsze jest to, że sztuczna warstwa nie tylko nic nie daje — ona aktywnie tłumi to, co działa.</strong> Trzy tysiące kont, które nie oglądają, obniżają wskaźnik decydujący o Twojej dystrybucji. Płacisz zasięgiem za liczbę w nagłówku profilu. Twoje relacje ogląda osiem osób — to jest prawdziwy rozmiar Twojej społeczności.</p>
+      <p>Ale najważniejsze zdanie w tym raporcie jest inne. <strong>Rolka, w której pokazałaś twarz, ma najmniej lajków i najwięcej zapisów ze wszystkiego, co zrobiłaś.</strong> Osiem procent lajków na wyświetlenie — jedyna normalna liczba w całym koncie. Siedemdziesiąt sześć zapisów na tysiąc wyświetleń, czternaście razy więcej niż Twój najszerzej dotarty post.</p>
+      <p>Nie musisz zgadywać, co robić dalej. <strong>Nagrałaś to wczoraj.</strong></p>
     </div>
 
     <p class="foot">
       <b>Źródła:</b> publiczne API Instagrama przez Windsor.ai (73 publikacje, 20.02–11.08.2026) + Twoje Statystyki z aplikacji, zakładka Ogólne, 90 dni do 10.08.2026.<br>
       <b>Konto:</b> @karolina_atelier_ — nie @karolajna.86, które podałaś. To konto ma podpięty Twój adres e-mail, więc analizuję właśnie je.<br>
-      <b>Ranking TOP 10:</b> lajki + (komentarze × 5). Wyświetlenia są dostępne tylko zbiorczo dla konta, nie per post — zapisy i udostępnienia są w zakładce „Zawartość", której jeszcze nie widziałem. Ranking może się po nich przetasować.<br>
+      <b>Dwa rankingi:</b> TOP 10 stoi na lajkach + (komentarze × 5), bo dla 73 publikacji tylko to mam. Ranking po zapisach i udostępnieniach obejmuje <b>tylko 6 ostatnich publikacji</b> — tyle widać w zakładce „Zawartość". Mała próba, więc traktuj kierunek jako mocny, a dokładne wartości jako wstępne.<br>
+      <b>Weryfikacja:</b> liczby ze Statystyk zgadzają się z danymi z API co do sztuki (Maybelline 543/12, equilibra 407/8, Sunny Care 277/2 i 307/3), więc oba źródła opisują to samo konto.<br>
       <b>Normy porównawcze</b> (3–8% lajków na wyświetlenie, 0,5–2% konwersji na obserwatora, 20–50:1 lajki do komentarzy) to typowe zakresy dla kont lifestyle/beauty tej wielkości, nie oficjalne dane Instagrama. Żadna liczba w tym raporcie nie została oszacowana ani zmyślona.
     </p>
   </section>
