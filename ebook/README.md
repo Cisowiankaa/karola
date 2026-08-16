@@ -1,18 +1,26 @@
 # E-book: „Od zera do zespołu"
 
-Kurs sprzedaży i social sellingu dla konsultantek. Format A5, 137 stron.
+Dwie publikacje na wspólnym stylu:
 
-Gotowy plik: **`Biznes-Oriflame-od-zera-do-zespolu.pdf`**
+| Plik | Co to | Objętość |
+|---|---|---|
+| `Biznes-Oriflame-od-zera-do-zespolu.pdf` | płatny kurs | 137 stron A5 |
+| `10-wiadomosci-ktore-sprzedaja.pdf` | bezpłatny lead magnet | 18 stron A5 |
+
+Lead magnet kończy się odesłaniem do płatnego kursu — to jego zadanie.
+Przed wysyłką uzupełnij w nim czerwoną ramkę: link do zakupu, kontakt
+i ewentualny kod rabatowy.
 
 ## Jak to jest zrobione
 
-Treść leży w `src/` jako fragmenty HTML, wygląd w `src/style.css`.
-Skrypt `build.py` skleja to w jeden dokument, renderuje przez Chromium
+Treść leży w `src/` (kurs) i `src-lead/` (lead magnet) jako fragmenty
+HTML, wspólny wygląd w `src/style.css`. Skrypt `build.py` skleja
+wybraną publikację w jeden dokument, renderuje przez Chromium
 i nanosi numery stron.
 
 ```
 src/
-  style.css          wygląd całości (kolory, czcionki, ramki)
+  style.css          wygląd obu publikacji (kolory, czcionki, ramki)
   00-front.html      okładka, strona redakcyjna, spis treści, wstęp
   10-czesc-1.html    Fundament (rozdz. 1–5)
   20-czesc-2.html    Klientki (6–10)
@@ -21,12 +29,16 @@ src/
   50-czesc-5.html    Zespół (21–25)
   60-czesc-6.html    System (26–29)
   70-zalaczniki.html Załączniki A–D + zakończenie
+
+src-lead/
+  00-lead.html       cały lead magnet (11 wiadomości + błędy + CTA)
 ```
 
 ## Przebudowanie po zmianach
 
 ```bash
-python3 build.py
+python3 build.py         # płatny kurs (domyślnie)
+python3 build.py lead    # lead magnet
 ```
 
 Wymaga: `pypdf`, `reportlab` oraz Chromium (ścieżka w `CHROME_CANDIDATES`

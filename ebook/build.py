@@ -26,13 +26,27 @@ from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 ROOT = Path(__file__).parent
-SRC = ROOT / "src"
 BUILD = ROOT / "build"
-OUT = ROOT / "Biznes-Oriflame-od-zera-do-zespolu.pdf"
+STYLE = ROOT / "src" / "style.css"  # wspólny arkusz stylów dla obu publikacji
 
-TITLE = "Biznes Oriflame: od zera do zespołu"
 AUTHOR = "Karolina Gleinert"
-SUBJECT = "Praktyczny kurs sprzedaży i social sellingu dla konsultantek"
+
+BOOKS = {
+    "ebook": {
+        "src": ROOT / "src",
+        "out": ROOT / "Biznes-Oriflame-od-zera-do-zespolu.pdf",
+        "title": "Od zera do zespołu",
+        "subject": "Praktyczny kurs sprzedaży i social sellingu dla konsultantek",
+    },
+    "lead": {
+        "src": ROOT / "src-lead",
+        "out": ROOT / "10-wiadomosci-ktore-sprzedaja.pdf",
+        "title": "10 wiadomości, które sprzedają",
+        "subject": "Gotowe wiadomości dla konsultantek — materiał bezpłatny",
+    },
+}
+
+BOOK = BOOKS["ebook"]  # nadpisywane w main() na podstawie argumentu
 
 NOFOLIO_TOKEN = "§§NF§§"
 
@@ -93,8 +107,8 @@ def add_toc_slots(body: str) -> str:
 
 def assemble(page_map: dict[str, int] | None = None) -> Path:
     """Skleja fragmenty HTML w jeden dokument."""
-    css = (SRC / "style.css").read_text(encoding="utf-8")
-    parts = sorted(p for p in SRC.glob("*.html"))
+    css = STYLE.read_text(encoding="utf-8")
+    parts = sorted(p for p in BOOK["src"].glob("*.html"))
     if not parts:
         sys.exit("Brak fragmentów HTML w src/.")
 
@@ -115,7 +129,7 @@ def assemble(page_map: dict[str, int] | None = None) -> Path:
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>{TITLE}</title>
+<title>{BOOK["title"]}</title>
 <style>
 {css}
 /* znacznik stron bez numeracji – niewidoczny w druku */
@@ -128,7 +142,7 @@ def assemble(page_map: dict[str, int] | None = None) -> Path:
 </html>
 """
     BUILD.mkdir(exist_ok=True)
-    out = BUILD / "ebook.html"
+    out = BUILD / "doc.html"
     out.write_text(doc, encoding="utf-8")
     print(f"  złożono {len(parts)} fragmentów -> {out.name}")
     return out
@@ -194,13 +208,13 @@ def stamp(raw: Path) -> None:
 
     writer.add_metadata(
         {
-            "/Title": TITLE,
+            "/Title": BOOK["title"],
             "/Author": AUTHOR,
-            "/Subject": SUBJECT,
+            "/Subject": BOOK["subject"],
             "/Creator": "HTML + Chromium",
         }
     )
-    with open(OUT, "wb") as fh:
+    with open(BOOK["out"], "wb") as fh:
         writer.write(fh)
 
     print(f"  stron w PDF: {len(reader.pages)}  (numerowanych: {numbered})")
@@ -224,7 +238,12 @@ def scan_pages(raw: Path) -> dict[str, int]:
 
 
 def main() -> None:
-    print("Budowanie e-booka…")
+    global BOOK
+    key = sys.argv[1] if len(sys.argv) > 1 else "ebook"
+    if key not in BOOKS:
+        sys.exit(f"Nieznana publikacja: {key}. Dostępne: {', '.join(BOOKS)}")
+    BOOK = BOOKS[key]
+    print(f"Budowanie: {BOOK['title']}…")
 
     # przebieg 1 — ustalenie numerów stron dla spisu treści
     raw = render(assemble())
@@ -235,8 +254,8 @@ def main() -> None:
     html = assemble(page_map)
     raw = render(html)
     stamp(raw)
-    size_mb = OUT.stat().st_size / 1024 / 1024
-    print(f"Gotowe: {OUT.name}  ({size_mb:.2f} MB)")
+    size_mb = BOOK["out"].stat().st_size / 1024 / 1024
+    print(f"Gotowe: {BOOK['out'].name}  ({size_mb:.2f} MB)")
 
 
 if __name__ == "__main__":
