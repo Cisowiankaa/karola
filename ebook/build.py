@@ -34,8 +34,8 @@ AUTHOR = "Karolina Gleinert"
 BOOKS = {
     "ebook": {
         "src": ROOT / "src",
-        "out": ROOT / "Biznes-Oriflame-od-zera-do-zespolu.pdf",
-        "title": "Od zera do zespołu",
+        "out": ROOT / "Od-zera-do-zespolu.pdf",
+        "title": "Od zera do zespołu — bez ściemy o łatwych pieniądzach",
         "subject": "Praktyczny kurs sprzedaży i social sellingu dla konsultantek",
     },
     "lead": {

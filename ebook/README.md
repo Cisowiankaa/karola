@@ -1,10 +1,12 @@
 # E-book: „Od zera do zespołu"
 
+*Bez ściemy o łatwych pieniądzach*
+
 Dwie publikacje na wspólnym stylu:
 
 | Plik | Co to | Objętość |
 |---|---|---|
-| `Biznes-Oriflame-od-zera-do-zespolu.pdf` | płatny kurs | 145 stron A5 |
+| `Od-zera-do-zespolu.pdf` | płatny kurs | 170 stron A5 |
 | `10-wiadomosci-ktore-sprzedaja.pdf` | bezpłatny lead magnet | 18 stron A5 |
 
 Lead magnet kończy się odesłaniem do płatnego kursu — to jego zadanie.

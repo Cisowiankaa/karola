@@ -277,6 +277,15 @@ td { padding: 2.2mm 2.6mm; border-bottom: 0.6pt solid var(--rule); vertical-alig
 tbody tr:nth-child(even) td { background: var(--cream); }
 table.compact td, table.compact th { padding: 1.7mm 2.2mm; font-size: 8.4pt; }
 
+/* WAŻNE: tabele o 5+ kolumnach nie mieszczą się w szerokości kolumny tekstu
+   przy domyślnym stopniu pisma. Chromium reaguje na to przeskalowaniem
+   CAŁEGO dokumentu w dół (~9%) — przez co pełnospadowe tła okładki
+   i przekładek przestają dochodzić do krawędzi strony. Dlatego szerokie
+   tabele dostają mniejszą czcionkę i węższe odstępy. Nie usuwaj tej reguły
+   bez sprawdzenia okładki. */
+table:has(th:nth-child(5)) td,
+table:has(th:nth-child(5)) th { font-size: 7.4pt; padding: 1.2mm 1.4mm; }
+
 /* ---------- cytat / myśl przewodnia ---------- */
 .pull {
   margin: 6mm 4mm; padding-left: 5mm; border-left: 2.4pt solid var(--gold);
