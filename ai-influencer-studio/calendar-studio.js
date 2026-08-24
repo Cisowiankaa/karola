@@ -1,0 +1,53 @@
+(() => {
+  const q=s=>document.querySelector(s);
+  const content=()=>document.getElementById('content');
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  const setHead=(title,sub)=>{const a=q('#pageTitle'),b=q('#pageSubtitle');if(a)a.textContent=title;if(b)b.textContent=sub};
+  const SOCIAL_KEY='aii-social-queue';
+  let cursor=new Date(); cursor.setDate(1); cursor.setHours(0,0,0,0);
+
+  const style=document.createElement('style');
+  style.textContent=`
+    .cal-pro{display:grid;gap:14px}.cal-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}.cal-nav{display:flex;gap:8px;align-items:center}.cal-title{font-size:20px;font-weight:900;color:#242833;min-width:190px;text-align:center}.cal-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.cal-kpi{background:#fff;border:1px solid #e7e9f1;border-radius:14px;padding:13px}.cal-kpi b{display:block;font-size:19px}.cal-kpi span{font-size:8px;color:#7b8290}.cal-card{background:#fff;border:1px solid #e7e9f1;border-radius:16px;padding:14px}.cal-week{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}.cal-week div{font-size:8px;font-weight:900;color:#7b8290;text-align:center;padding:6px}.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.cal-day{min-height:128px;border:1px solid #eceef5;border-radius:12px;padding:8px;background:#fbfbfd;overflow:hidden}.cal-day.out{opacity:.42}.cal-day.today{border-color:#8f77ef;box-shadow:0 0 0 1px #8f77ef inset}.cal-day-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px}.cal-num{font-size:10px;font-weight:900}.cal-count{font-size:7px;color:#7b8290}.cal-event{display:block;width:100%;border:0;border-radius:8px;padding:7px;margin:0 0 5px;text-align:left;cursor:pointer;background:#f1edff;color:#4d3a9d;font-size:7px;line-height:1.25}.cal-event b{display:block;font-size:8px;color:#27223b;margin-bottom:2px}.cal-event.published{background:#edf8f1;color:#287a4b}.cal-event.draft{background:#f3f4f7;color:#626977}.cal-event.ready{background:#eef4ff;color:#315fa8}.cal-event.overdue{box-shadow:0 0 0 1px #c55 inset}.cal-list{display:grid;gap:8px;margin-top:12px}.cal-list-row{display:grid;grid-template-columns:.7fr 1.4fr 1fr .8fr auto;gap:8px;align-items:center;padding:10px;border:1px solid #eceef5;border-radius:11px;background:#fafafe;font-size:8px}.cal-list-row small{display:block;color:#7b8290}.cal-empty{padding:24px;text-align:center;color:#7b8290;font-size:9px}@media(max-width:950px){.cal-kpis{grid-template-columns:1fr 1fr}.cal-grid{grid-template-columns:1fr 1fr}.cal-week{display:none}.cal-list-row{grid-template-columns:1fr}.cal-day{min-height:110px}}`;
+  document.head.appendChild(style);
+
+  const iso=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  const monthLabel=d=>d.toLocaleDateString('pl-PL',{month:'long',year:'numeric'}).replace(/^./,c=>c.toUpperCase());
+  const statusClass=s=>s==='Opublikowany'?'published':s==='Szkic'?'draft':s==='Gotowy'?'ready':'';
+
+  function render(){
+    setHead('Kalendarz publikacji','Miesięczny plan treści zsynchronizowany z Social Media Studio.');
+    const items=read(SOCIAL_KEY,[]).filter(x=>x.date);
+    const y=cursor.getFullYear(),m=cursor.getMonth();
+    const monthItems=items.filter(x=>{const d=new Date(x.date+'T00:00:00');return d.getFullYear()===y&&d.getMonth()===m});
+    const now=new Date(); now.setHours(0,0,0,0);
+    const scheduled=monthItems.filter(x=>x.status==='Zaplanowany').length;
+    const ready=monthItems.filter(x=>x.status==='Gotowy').length;
+    const published=monthItems.filter(x=>x.status==='Opublikowany').length;
+    const overdue=monthItems.filter(x=>x.status!=='Opublikowany'&&new Date(x.date+'T00:00:00')<now).length;
+
+    const first=new Date(y,m,1), last=new Date(y,m+1,0);
+    const mondayIndex=(first.getDay()+6)%7;
+    const start=new Date(y,m,1-mondayIndex);
+    const cells=[];
+    for(let i=0;i<42;i++){
+      const d=new Date(start);d.setDate(start.getDate()+i);
+      const key=iso(d); const dayItems=items.filter(x=>x.date===key).sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+      const out=d.getMonth()!==m, today=key===iso(now);
+      cells.push(`<div class="cal-day ${out?'out':''} ${today?'today':''}"><div class="cal-day-head"><span class="cal-num">${d.getDate()}</span><span class="cal-count">${dayItems.length?dayItems.length+' publ.':''}</span></div>${dayItems.slice(0,4).map(x=>{const late=x.status!=='Opublikowany'&&new Date(x.date+'T00:00:00')<now;return `<button class="cal-event ${statusClass(x.status)} ${late?'overdue':''}" data-cal-id="${x.id}"><b>${esc(x.time||'')} ${esc(x.title)}</b>${esc(x.platform)} • ${esc(x.type)}<br>${esc(x.status)}</button>`}).join('')}${dayItems.length>4?`<div class="cal-count">+ ${dayItems.length-4} więcej</div>`:''}</div>`);
+    }
+
+    const upcoming=items.filter(x=>new Date(x.date+'T23:59:59')>=now).sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||''))).slice(0,10);
+    content().innerHTML=`<section class="creator-tool-hero"><div><div class="eyebrow">CONTENT CALENDAR</div><h2>Kalendarz publikacji</h2><p>Wpisy z Social Media Studio pojawiają się tutaj automatycznie.</p></div><span class="tag">LIVE SYNC</span></section><section class="cal-pro"><div class="cal-toolbar"><div class="cal-nav"><button class="ghost" id="calPrev">←</button><div class="cal-title">${monthLabel(cursor)}</div><button class="ghost" id="calNext">→</button></div><button class="primary" id="calToday">Dzisiaj</button></div><div class="cal-kpis"><div class="cal-kpi"><b>${scheduled}</b><span>zaplanowane</span></div><div class="cal-kpi"><b>${ready}</b><span>gotowe</span></div><div class="cal-kpi"><b>${published}</b><span>opublikowane</span></div><div class="cal-kpi"><b>${overdue}</b><span>po terminie</span></div></div><div class="cal-card"><div class="cal-week"><div>Pon</div><div>Wt</div><div>Śr</div><div>Czw</div><div>Pt</div><div>Sob</div><div>Nd</div></div><div class="cal-grid">${cells.join('')}</div></div><div class="cal-card"><h3>Najbliższe publikacje</h3><div class="cal-list">${upcoming.length?upcoming.map(x=>`<div class="cal-list-row"><div><b>${esc(x.date)}</b><small>${esc(x.time||'')}</small></div><div><b>${esc(x.title)}</b><small>${esc(x.type)}</small></div><div>${esc(x.platform)}</div><div><span class="social-badge">${esc(x.status)}</span></div><button class="ghost" data-cal-open-social="1">Otwórz Social Media</button></div>`).join(''):'<div class="cal-empty">Brak zaplanowanych publikacji. Dodaj je w Social Media Studio.</div>'}</div></div></section>`;
+    q('#calPrev').onclick=()=>{cursor.setMonth(cursor.getMonth()-1);render()};
+    q('#calNext').onclick=()=>{cursor.setMonth(cursor.getMonth()+1);render()};
+    q('#calToday').onclick=()=>{cursor=new Date();cursor.setDate(1);render()};
+    document.querySelectorAll('[data-cal-open-social]').forEach(b=>b.onclick=()=>document.querySelector('.nav-item[data-view="social"]')?.click());
+    document.querySelectorAll('[data-cal-id]').forEach(b=>b.onclick=()=>document.querySelector('.nav-item[data-view="social"]')?.click());
+  }
+  function bind(){document.querySelectorAll('.nav-item[data-view="calendar"]').forEach(a=>{if(a.dataset.calendarProBound)return;a.dataset.calendarProBound='1';a.addEventListener('click',()=>setTimeout(()=>{render();localStorage.setItem('aii-last-view','calendar')},25));});}
+  document.addEventListener('aii:social-changed',()=>{if(localStorage.getItem('aii-last-view')==='calendar')render()});
+  window.addEventListener('storage',e=>{if(e.key===SOCIAL_KEY&&localStorage.getItem('aii-last-view')==='calendar')render()});
+  document.addEventListener('DOMContentLoaded',()=>{bind();if(localStorage.getItem('aii-last-view')==='calendar')setTimeout(render,100);const nav=document.querySelector('.nav');if(nav)new MutationObserver(bind).observe(nav,{childList:true,subtree:true});});
+})();
