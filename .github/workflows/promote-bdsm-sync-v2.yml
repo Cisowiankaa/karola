@@ -12,21 +12,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Switch BDSM app to sync-fix-v3
+      - name: Refresh BDSM sync v3 cache version
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('bdsm-app/index.html')
           text = p.read_text(encoding='utf-8')
-          old_v2 = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v2.js?v=20260824-2012'
-          old_raw = 'https://raw.githubusercontent.com/Cisowiankaa/karola/main/bdsm-app/sync-fix.js'
-          new = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2020'
-          if old_v2 in text:
-              text = text.replace(old_v2, new)
-          elif old_raw in text:
-              text = text.replace(old_raw, new)
+          old = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2020'
+          new = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2042'
+          if old in text:
+              text = text.replace(old, new)
           elif new not in text:
-              raise SystemExit('Expected sync script reference not found')
+              raise SystemExit('Expected sync v3 reference not found')
           p.write_text(text, encoding='utf-8')
           PY
       - name: Commit updated index
@@ -35,5 +32,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bdsm-app/index.html
-          git commit -m 'Use BDSM sync v3 client'
+          git commit -m 'Refresh BDSM sync v3 cache version'
           git push
