@@ -1,0 +1,77 @@
+name: Embed BDSM email history
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/embed-bdsm-email-history.yml'
+permissions:
+  contents: write
+jobs:
+  embed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Embed stable email history client
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p=Path('bdsm-app/index.html')
+          text=p.read_text(encoding='utf-8')
+          start='<!-- BDSM_EMAIL_HISTORY_V4_START -->'
+          end='<!-- BDSM_EMAIL_HISTORY_V4_END -->'
+          block=r'''<!-- BDSM_EMAIL_HISTORY_V4_START -->
+<script>
+(()=>{
+  const API='https://hook.eu1.make.com/gw8nr0beqtbymtd2xgiga3wn7qfjhp25';
+  const LOG='bdsm-app-invite-log-v1';
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
+  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  let busy=false;
+  const normalize=x=>{for(let i=0;i<4;i++){if(typeof x==='string'){try{x=JSON.parse(x)}catch(_){break}}else if(x&&typeof x==='object'&&typeof x.body==='string'){try{x=JSON.parse(x.body)}catch(_){break}}else break}return x};
+  const validDate=v=>{if(!v)return null;const d=new Date(v);return Number.isNaN(d.getTime())?null:v};
+  async function pullHistory(){
+    if(busy)return; const accountId=read('bdsm-app-cloud-config',{}).accountId; if(!accountId)return;
+    busy=true;
+    try{
+      const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'invite_history',accountId,clientTime:new Date().toISOString(),requestId:'HIST-'+Date.now()})});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      let raw;try{raw=await r.json()}catch(_){raw=await r.text()}
+      const data=normalize(raw); const values=Array.isArray(data?.values)?data.values:Array.isArray(data)?data:[];
+      const log=read(LOG,{});
+      for(const row of values){
+        if(!Array.isArray(row)||row.length<4)continue;
+        const key=String(row[0]||''), rowAccount=String(row[3]||'');
+        if(!key.startsWith('invite_sent:')||rowAccount!==String(accountId))continue;
+        const person=key.slice(12).trim(); if(!person)continue;
+        log[person]={...(log[person]||{}),status:'sent',messageId:String(row[1]||'').trim()||'—',sentAt:validDate(String(row[2]||'').trim()),source:'central',error:null};
+      }
+      write(LOG,log);
+      const txt=document.querySelector('#syncText'),dot=document.querySelector('#syncDot');if(txt)txt.textContent='Online — połączono';if(dot)dot.className='sync-dot ok';
+      document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'));
+    }catch(e){console.warn('invite_history_v4',e)}finally{busy=false}
+  }
+  function open(){const s=document.querySelector('#view-email-invites');return s&&!s.classList.contains('hidden')&&s.style.display!=='none'}
+  document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(pullHistory,80)},true);
+  document.addEventListener('bdsm-sync-complete',()=>setTimeout(pullHistory,350));
+  window.addEventListener('focus',()=>{if(open())pullHistory()});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden&&open())pullHistory()});
+  setInterval(()=>{if(open())pullHistory()},5000);
+  setTimeout(pullHistory,1000);
+  window.bdsmRefreshInviteHistory=pullHistory;
+})();
+</script>
+<!-- BDSM_EMAIL_HISTORY_V4_END -->'''
+          if start in text and end in text:
+              a=text.index(start); b=text.index(end,a)+len(end); text=text[:a]+block+text[b:]
+          else:
+              text=text.replace('</body>',block+'\n</body>')
+          p.write_text(text,encoding='utf-8')
+          PY
+      - name: Commit embedded client
+        run: |
+          if git diff --quiet; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add bdsm-app/index.html
+          git commit -m 'Embed stable BDSM email history client'
+          git push
