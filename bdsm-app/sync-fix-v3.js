@@ -139,4 +139,4 @@
 
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
 })();
-// trigger email-history-v4 embed 2026-08-24T19:44Z
+// trigger stabilized sync v5 2026-08-25T00:10+02:00
