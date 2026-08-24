@@ -64,7 +64,45 @@
   }
 
   function panelOpen(){const s=document.querySelector('#view-email-invites');return !!s&&!s.classList.contains('hidden')&&s.style.display!=='none';}
+
+  function installSafetyCompact(){
+    if(window.__bdsmSafetyCompactInstalled)return;
+    const panel=document.querySelector('.safety');
+    if(!panel)return;
+    window.__bdsmSafetyCompactInstalled=true;
+
+    const style=document.createElement('style');
+    style.textContent=`
+      .safety{transition:.2s ease;overflow:hidden}
+      .safety.safety-collapsed{padding:10px 12px;max-height:48px;cursor:pointer}
+      .safety.safety-collapsed h3{margin:0;font-size:13px;display:flex;align-items:center;justify-content:space-between}
+      .safety.safety-collapsed h3::after{content:'⌃';font-size:12px;color:#98a2b3}
+      .safety.safety-collapsed p,.safety.safety-collapsed .panic{display:none}
+      .safety:not(.safety-collapsed) h3{cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+      .safety:not(.safety-collapsed) h3::after{content:'⌄';font-size:12px;color:#98a2b3}
+    `;
+    document.head.appendChild(style);
+
+    const apply=(collapsed)=>{
+      panel.classList.toggle('safety-collapsed',collapsed);
+      localStorage.setItem('bdsm-app-safety-collapsed',collapsed?'1':'0');
+      panel.setAttribute('aria-expanded',collapsed?'false':'true');
+    };
+
+    const saved=localStorage.getItem('bdsm-app-safety-collapsed');
+    apply(saved===null ? true : saved==='1');
+
+    const toggle=(e)=>{
+      if(e.target.closest('#panic'))return;
+      if(e.target.closest('h3') || panel.classList.contains('safety-collapsed')){
+        apply(!panel.classList.contains('safety-collapsed'));
+      }
+    };
+    panel.addEventListener('click',toggle);
+  }
+
   function install(){
+    installSafetyCompact();
     document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(refreshCentral,80);},true);
     document.addEventListener('bdsm-sync-complete',()=>setTimeout(refreshCentral,300));
     window.addEventListener('focus',()=>{if(panelOpen())refreshCentral();});
