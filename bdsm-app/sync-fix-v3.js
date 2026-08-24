@@ -58,18 +58,28 @@
     }
   }
 
+  function showEmailPanel() {
+    const nav=$('#nav'), section=$('#view-email-invites');
+    if(!nav||!section) return;
+    document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));
+    section.classList.remove('hidden');
+    nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    const btn=$('#emailInvitesNav'); if(btn) btn.classList.add('active');
+    renderEmailPanel();
+  }
+
   function installEmailPanel() {
     const nav=$('#nav'),content=$('.content');
     if(!nav||!content||$('#emailInvitesNav')) return;
     const accessBtn=[...nav.querySelectorAll('button')].find(b=>b.dataset.view==='access');
     const btn=document.createElement('button');
-    btn.id='emailInvitesNav'; btn.type='button'; btn.innerHTML='✉ E-maile / Zaproszenia';
+    btn.id='emailInvitesNav'; btn.type='button'; btn.dataset.view='email-invites'; btn.innerHTML='✉ E-maile / Zaproszenia';
     if(accessBtn&&accessBtn.nextSibling) nav.insertBefore(btn,accessBtn.nextSibling); else nav.appendChild(btn);
     const section=document.createElement('section');
     section.id='view-email-invites'; section.className='hidden';
     section.innerHTML='<div class="panel"><h3>E-maile / Zaproszenia</h3><p style="color:#98a2b3;font-size:12px;margin-top:-4px">Statusy z lokalnej aplikacji i centralnej bazy.</p><div id="emailInviteStats" style="margin:12px 0"></div><div id="emailInviteTable"></div></div>';
     content.appendChild(section);
-    btn.addEventListener('click',()=>{document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));section.classList.remove('hidden');nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderEmailPanel();});
+    btn.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();showEmailPanel();});
     section.addEventListener('click',e=>{const resend=e.target.closest('[data-resend-invite]');if(resend)resendInvite(decodeURIComponent(resend.dataset.resendInvite));});
     renderEmailPanel();
   }
