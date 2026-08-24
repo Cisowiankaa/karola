@@ -12,6 +12,8 @@ on:
       - 'bdsm-app/offences-module.js'
       - 'bdsm-app/deadlines-module.js'
       - 'bdsm-app/education-tasks-module.js'
+      - 'bdsm-app/education-library-module.js'
+      - 'bdsm-app/written-notes-module.js'
 permissions:
   contents: write
 jobs:
