@@ -1,0 +1,138 @@
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v23.0';
+const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
+
+function cors(res) {
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Access-Control-Allow-Origin', 'https://cisowiankaa.github.io');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Cache-Control', 'no-store');
+}
+
+async function graph(path, token) {
+  const sep = path.includes('?') ? '&' : '?';
+  const r = await fetch(`${GRAPH}/${path}${sep}access_token=${encodeURIComponent(token)}`);
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data?.error?.message || `Meta Graph HTTP ${r.status}`);
+  return data;
+}
+
+function mediaType(type) {
+  if (type === 'VIDEO') return 'Reels';
+  if (type === 'CAROUSEL_ALBUM') return 'Carousel';
+  return 'Post';
+}
+
+module.exports = async function handler(req, res) {
+  cors(res);
+  if (req.method === 'OPTIONS') return res.status(204).end();
+  if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
+
+  const token = process.env.META_ACCESS_TOKEN;
+  const igUserId = process.env.META_IG_USER_ID;
+  const pageId = process.env.META_PAGE_ID;
+
+  if (!token || (!igUserId && !pageId)) {
+    return res.status(503).json({
+      ok: false,
+      service: 'meta-social-sync',
+      configured: false,
+      missing: [
+        !token ? 'META_ACCESS_TOKEN' : null,
+        !igUserId ? 'META_IG_USER_ID' : null,
+        !pageId ? 'META_PAGE_ID' : null
+      ].filter(Boolean),
+      message: 'Meta API credentials are not configured on the server.'
+    });
+  }
+
+  try {
+    const profiles = [];
+    const items = [];
+    const metrics = {};
+
+    if (igUserId) {
+      const ig = await graph(`${igUserId}?fields=id,username,name,profile_picture_url,followers_count,media_count`, token);
+      profiles.push({
+        platform: 'Instagram',
+        handle: ig.username ? `@${ig.username}` : '',
+        active: true,
+        connected: true,
+        externalId: ig.id,
+        followers: ig.followers_count || 0,
+        mediaCount: ig.media_count || 0,
+        avatar: ig.profile_picture_url || ''
+      });
+      metrics.instagram = { followers: ig.followers_count || 0, mediaCount: ig.media_count || 0 };
+
+      const media = await graph(`${igUserId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count&limit=25`, token);
+      for (const m of media.data || []) {
+        const dt = m.timestamp ? new Date(m.timestamp) : new Date();
+        items.push({
+          id: `ig-${m.id}`,
+          externalId: `ig-${m.id}`,
+          title: (m.caption || 'Publikacja Instagram').split(/\n/)[0].slice(0, 90),
+          platform: ig.username ? `Instagram @${ig.username}` : 'Instagram',
+          type: m.media_product_type === 'REELS' ? 'Reels' : mediaType(m.media_type),
+          date: dt.toISOString().slice(0, 10),
+          time: dt.toTimeString().slice(0, 5),
+          status: 'Opublikowany',
+          notes: m.caption || '',
+          permalink: m.permalink || '',
+          likes: m.like_count || 0,
+          comments: m.comments_count || 0,
+          synced: true
+        });
+      }
+    }
+
+    if (pageId) {
+      const page = await graph(`${pageId}?fields=id,name,username,picture{url},followers_count,fan_count`, token);
+      profiles.push({
+        platform: 'Facebook',
+        handle: page.username ? `@${page.username}` : (page.name || ''),
+        active: true,
+        connected: true,
+        externalId: page.id,
+        followers: page.followers_count || page.fan_count || 0,
+        avatar: page.picture?.data?.url || ''
+      });
+      metrics.facebook = { followers: page.followers_count || page.fan_count || 0 };
+
+      const posts = await graph(`${pageId}/posts?fields=id,message,created_time,permalink_url,shares,likes.summary(true),comments.summary(true)&limit=25`, token);
+      for (const p of posts.data || []) {
+        const dt = p.created_time ? new Date(p.created_time) : new Date();
+        items.push({
+          id: `fb-${p.id}`,
+          externalId: `fb-${p.id}`,
+          title: (p.message || 'Publikacja Facebook').split(/\n/)[0].slice(0, 90),
+          platform: page.username ? `Facebook @${page.username}` : `Facebook ${page.name || ''}`.trim(),
+          type: 'Post',
+          date: dt.toISOString().slice(0, 10),
+          time: dt.toTimeString().slice(0, 5),
+          status: 'Opublikowany',
+          notes: p.message || '',
+          permalink: p.permalink_url || '',
+          likes: p.likes?.summary?.total_count || 0,
+          comments: p.comments?.summary?.total_count || 0,
+          shares: p.shares?.count || 0,
+          synced: true
+        });
+      }
+    }
+
+    items.sort((a, b) => (b.date + b.time).localeCompare(a.date + a.time));
+    return res.status(200).json({
+      ok: true,
+      service: 'meta-social-sync',
+      provider: 'Meta Graph API',
+      graphVersion: GRAPH_VERSION,
+      syncedAt: new Date().toISOString(),
+      profiles,
+      items,
+      metrics
+    });
+  } catch (error) {
+    return res.status(502).json({ ok: false, error: error?.message || 'Meta synchronization failed' });
+  }
+};
