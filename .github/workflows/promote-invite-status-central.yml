@@ -9,6 +9,7 @@ on:
       - 'bdsm-app/sync-fix-v3.js'
       - 'bdsm-app/invite-status-central.js'
       - 'bdsm-app/email-panel-force-open.js'
+      - 'bdsm-app/offences-module.js'
 permissions:
   contents: write
 jobs:
