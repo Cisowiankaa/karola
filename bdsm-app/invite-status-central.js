@@ -15,7 +15,7 @@
 
   function normalizePayload(data){
     let x=data;
-    for(let i=0;i<3;i++){
+    for(let i=0;i<4;i++){
       if(typeof x==='string'){try{x=JSON.parse(x);}catch(_){break;}}
       else if(x&&typeof x==='object'&&typeof x.body==='string'){try{x=JSON.parse(x.body);}catch(_){break;}}
       else break;
@@ -29,7 +29,7 @@
     if(!accountId)return;
     refreshing=true;
     try{
-      const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'invite_history',accountId,clientTime:new Date().toISOString()})});
+      const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'invite_history',accountId,clientTime:new Date().toISOString(),requestId:'HIST-'+Date.now()})});
       if(!r.ok)throw new Error('HTTP '+r.status);
       let raw; try{raw=await r.json();}catch(_){raw=await r.text();}
       const data=normalizePayload(raw);
@@ -45,8 +45,9 @@
         if(!person)continue;
         const messageId=String(row[1]||'').trim();
         const sentAt=String(row[2]||'').trim();
-        log[person]={...(log[person]||{}),status:'sent',messageId:messageId||'—',sentAt:sentAt||null,source:'central',error:null};
-        changed=true;
+        const prev=log[person]||{};
+        const next={...prev,status:'sent',messageId:messageId||'—',sentAt:sentAt||null,source:'central',error:null};
+        if(JSON.stringify(prev)!==JSON.stringify(next)){log[person]=next;changed=true;}
       }
       if(changed)write(logKey,log);
       setOnlineState(true);
@@ -63,8 +64,9 @@
     document.addEventListener('bdsm-sync-complete',()=>setTimeout(refreshCentral,250));
     window.addEventListener('focus',()=>{if(panelOpen())refreshCentral();});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden&&panelOpen())refreshCentral();});
-    setInterval(()=>{if(panelOpen())refreshCentral();},60000);
+    setInterval(()=>{if(panelOpen())refreshCentral();},5000);
     setTimeout(refreshCentral,900);
+    window.bdsmRefreshInviteHistory=refreshCentral;
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
