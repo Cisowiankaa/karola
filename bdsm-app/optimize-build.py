@@ -11,11 +11,11 @@ patterns = [
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/invite-status-central\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/email-panel-force-open\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/offences-module\.js[^\"]*"[^>]*></script>',
+    r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/deadlines-module\.js[^\"]*"[^>]*></script>',
 ]
 for pattern in patterns:
     text = re.sub(pattern, '', text)
 
-# Remove previous generated optimization blocks.
 for start, end in [
     ('<!-- BDSM_RUNTIME_INLINE_START -->', '<!-- BDSM_RUNTIME_INLINE_END -->'),
     ('<!-- BDSM_SAFETY_TOPBAR_START -->', '<!-- BDSM_SAFETY_TOPBAR_END -->'),
@@ -30,6 +30,7 @@ sync = (root / 'sync-fix-v3.js').read_text(encoding='utf-8')
 history = (root / 'invite-status-central.js').read_text(encoding='utf-8')
 email_panel = (root / 'email-panel-force-open.js').read_text(encoding='utf-8')
 offences = (root / 'offences-module.js').read_text(encoding='utf-8')
+deadlines = (root / 'deadlines-module.js').read_text(encoding='utf-8')
 
 safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 <style>
@@ -70,9 +71,9 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences)
+runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences, deadlines)
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: inline runtime + offences + topbar safety + no CDN duplicates')
+print('Optimized BDSM index: inline runtime + offences + deadlines + calendar + topbar safety')
