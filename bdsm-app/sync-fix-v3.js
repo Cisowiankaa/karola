@@ -67,7 +67,7 @@
     if(accessBtn&&accessBtn.nextSibling) nav.insertBefore(btn,accessBtn.nextSibling); else nav.appendChild(btn);
     const section=document.createElement('section');
     section.id='view-email-invites'; section.className='hidden';
-    section.innerHTML='<div class="panel"><h3>E-maile / Zaproszenia</h3><p style="color:#98a2b3;font-size:12px;margin-top:-4px">Statusy zaproszeń. Zwykła synchronizacja nie wysyła ponownie już wysłanych zaproszeń.</p><div id="emailInviteStats" style="margin:12px 0"></div><div id="emailInviteTable"></div></div>';
+    section.innerHTML='<div class="panel"><h3>E-maile / Zaproszenia</h3><p style="color:#98a2b3;font-size:12px;margin-top:-4px">Statusy z lokalnej aplikacji i centralnej bazy.</p><div id="emailInviteStats" style="margin:12px 0"></div><div id="emailInviteTable"></div></div>';
     content.appendChild(section);
     btn.addEventListener('click',()=>{document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));section.classList.remove('hidden');nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderEmailPanel();});
     section.addEventListener('click',e=>{const resend=e.target.closest('[data-resend-invite]');if(resend)resendInvite(decodeURIComponent(resend.dataset.resendInvite));});
@@ -76,17 +76,28 @@
 
   function renderEmailPanel() {
     const table=$('#emailInviteTable'),stats=$('#emailInviteStats'); if(!table) return;
-    const list=accessList(),log=readInviteLog();
-    const rows=list.map(item=>{const st=log[item.person]||{status:'pending'};const when=st.sentAt||st.lastAttemptAt||null;return `<tr><td>${item.person||'—'}</td><td>${item.role||'user'}</td><td>${statusBadge(st.status)}</td><td>${fmtDate(when)}</td><td>${st.error?`<span style="color:#ff929c">${st.error}</span>`:'—'}</td><td><button class="btn" data-resend-invite="${encodeURIComponent(item.person||'')}" ${item.revoked?'disabled':''}>Wyślij ponownie</button></td></tr>`;}).join('');
-    const sent=list.filter(i=>(log[i.person]||{}).status==='sent').length;
-    const errors=list.filter(i=>(log[i.person]||{}).status==='error').length;
-    const pending=list.filter(i=>!i.revoked&&(log[i.person]||{}).status!=='sent').length;
+    const local=accessList(),log=readInviteLog();
+    const byPerson=new Map();
+    local.forEach(item=>{if(item&&item.person)byPerson.set(String(item.person).toLowerCase(),item);});
+    Object.keys(log).forEach(person=>{const key=String(person).toLowerCase();if(!byPerson.has(key))byPerson.set(key,{person,role:'—',centralOnly:true});});
+    const list=[...byPerson.values()];
+    const rows=list.map(item=>{
+      const st=log[item.person]||log[Object.keys(log).find(k=>k.toLowerCase()===String(item.person).toLowerCase())]||{status:'pending'};
+      const when=st.sentAt||st.lastAttemptAt||null;
+      const messageId=st.messageId||'—';
+      const canResend=!item.centralOnly&&!item.revoked;
+      return `<tr><td>${item.person||'—'}</td><td>${item.role||'—'}</td><td>${statusBadge(st.status)}</td><td>${fmtDate(when)}</td><td style="font-family:monospace;font-size:11px">${messageId}</td><td>${st.source==='central'?'Baza centralna':'Lokalny'}</td><td>${st.error?`<span style="color:#ff929c">${st.error}</span>`:'—'}</td><td>${canResend?`<button class="btn" data-resend-invite="${encodeURIComponent(item.person||'')}">Wyślij ponownie</button>`:'—'}</td></tr>`;
+    }).join('');
+    const sent=list.filter(i=>{const k=Object.keys(log).find(x=>x.toLowerCase()===String(i.person).toLowerCase());return k&&(log[k]||{}).status==='sent';}).length;
+    const errors=list.filter(i=>{const k=Object.keys(log).find(x=>x.toLowerCase()===String(i.person).toLowerCase());return k&&(log[k]||{}).status==='error';}).length;
+    const pending=Math.max(0,list.length-sent-errors);
     if(stats) stats.innerHTML=`<span style="margin-right:14px">Wysłano: <strong>${sent}</strong></span><span style="margin-right:14px">Oczekuje: <strong>${pending}</strong></span><span style="margin-right:14px">Błędy: <strong>${errors}</strong></span><span>Łącznie: <strong>${list.length}</strong></span>`;
-    table.innerHTML=rows?`<div style="overflow:auto"><table class="table"><thead><tr><th>Adres</th><th>Rola</th><th>Status</th><th>Ostatnia próba</th><th>Błąd</th><th>Akcja</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Brak zaproszeń.</div>';
+    table.innerHTML=rows?`<div style="overflow:auto"><table class="table"><thead><tr><th>Adres</th><th>Rola</th><th>Status</th><th>Data</th><th>Message ID</th><th>Źródło</th><th>Błąd</th><th>Akcja</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Brak zaproszeń.</div>';
   }
 
   function install() {
     installEmailPanel();
+    document.addEventListener('bdsm-invite-status-updated',renderEmailPanel);
     const btn=$('#syncNow'); if(!btn) return;
     const replacement=btn.cloneNode(true); btn.replaceWith(replacement);
     replacement.addEventListener('click',async()=>{
