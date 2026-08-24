@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - '.github/workflows/embed-bdsm-email-history.yml'
+      - 'bdsm-app/sync-fix-v3.js'
 permissions:
   contents: write
 jobs:
@@ -42,7 +43,7 @@ jobs:
         if(!Array.isArray(row)||row.length<4)continue;
         const key=String(row[0]||''), rowAccount=String(row[3]||'');
         if(!key.startsWith('invite_sent:')||rowAccount!==String(accountId))continue;
-        const person=key.slice(12).trim(); if(!person)continue;
+        const person=key.slice('invite_sent:'.length).trim(); if(!person)continue;
         log[person]={...(log[person]||{}),status:'sent',messageId:String(row[1]||'').trim()||'—',sentAt:validDate(String(row[2]||'').trim()),source:'central',error:null};
       }
       write(LOG,log);
