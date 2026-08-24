@@ -81,6 +81,9 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
 
 
 
+
+
+
 <!-- BDSM_RUNTIME_INLINE_START -->
 <script>
 (() => {
@@ -596,6 +599,63 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
     box.innerHTML=`<div style="overflow:auto"><table class="table"><thead><tr><th>Termin</th><th>Rodzaj</th><th>Zadanie</th><th>Status</th><th>Wynik</th><th>Powiązania</th><th>Materiał</th><th>Akcja</th></tr></thead><tbody>${data.map(x=>{const st=statusFor(x),score=x.score==null?'—':`${x.score}${x.max_score!=null?'/'+x.max_score:''}`;return `<tr><td>${fmt(x.due_at)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong><div style="font-family:monospace;font-size:10px;color:#768197">${esc(x.task_id)}</div>${x.description?`<div style="color:#98a2b3;margin-top:3px">${esc(x.description)}</div>`:''}</td><td>${badge(st)}</td><td>${esc(score)}</td><td>${x.offence_id?`⚠ ${esc(x.offence_id)}`:''}${x.offence_id&&x.event_id?'<br>':''}${x.event_id?`🔗 ${esc(x.event_id)}`:''||'—'}</td><td>${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer" style="color:#9bd0ff">Otwórz</a>`:'—'}</td><td>${!['wykonane','anulowane'].includes(x.status)?`<button class="btn" data-edu-done="${esc(x.task_id)}">Wykonane</button> <button class="btn" data-edu-cancel="${esc(x.task_id)}">Anuluj</button>`:''} <button class="btn danger" data-edu-delete="${esc(x.task_id)}">Usuń</button></td></tr>`}).join('')}</tbody></table></div>`;
   }
   function install(){ensureUI();render();window.bdsmEducationTasks={list:()=>read(KEY,[]),open:openView};document.addEventListener('bdsm-offences-updated',refreshSelects);}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+</script>
+<script>
+(()=>{
+  if(window.__bdsmEducationLibraryInstalled)return;
+  window.__bdsmEducationLibraryInstalled=true;
+  const presets=[
+    {id:'dict-ort',label:'Dyktando — ortografia',type:'dyktando',title:'Dyktando ortograficzne',desc:'Wykonaj dyktando i zapisz wynik.'},
+    {id:'pl-read',label:'Język polski — czytanie ze zrozumieniem',type:'zadanie domowe',title:'Czytanie ze zrozumieniem',desc:'Przeczytaj wskazany tekst i odpowiedz na pytania.'},
+    {id:'math-basic',label:'Matematyka — działania',type:'kartkówka',title:'Kartkówka z matematyki',desc:'Wykonaj zestaw działań i zapisz wynik.'},
+    {id:'knowledge',label:'Test wiedzy',type:'test online',title:'Test wiedzy',desc:'Wykonaj uzgodniony test i zapisz wynik.'},
+    {id:'writing',label:'Praca pisemna',type:'zadanie domowe',title:'Praca pisemna',desc:'Przygotuj krótką pracę pisemną na uzgodniony temat.'},
+    {id:'revision',label:'Powtórka materiału',type:'sprawdzian',title:'Powtórka materiału',desc:'Powtórz wskazany materiał i wykonaj sprawdzian.'}
+  ];
+  function install(){
+    const section=document.querySelector('#view-education-tasks'); if(!section||document.querySelector('#eduPresetBox'))return;
+    const grid=section.querySelector('.form-grid'); if(!grid)return;
+    const wrap=document.createElement('div'); wrap.id='eduPresetBox'; wrap.className='field span3';
+    wrap.innerHTML=`<label>Biblioteka gotowych zadań</label><div style="display:flex;gap:8px;flex-wrap:wrap"><select id="eduPreset" style="flex:1;min-width:240px"><option value="">— wybierz gotowe zadanie —</option>${presets.map(p=>`<option value="${p.id}">${p.label}</option>`).join('')}</select><button class="btn" id="eduPresetApply" type="button">Wstaw</button></div>`;
+    grid.insertBefore(wrap,grid.firstChild);
+    document.querySelector('#eduPresetApply')?.addEventListener('click',()=>{
+      const p=presets.find(x=>x.id===document.querySelector('#eduPreset')?.value); if(!p)return;
+      const type=document.querySelector('#eduType'),title=document.querySelector('#eduTitle'),desc=document.querySelector('#eduDesc');
+      if(type)type.value=p.type;if(title)title.value=p.title;if(desc)desc.value=p.desc;
+    });
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',()=>setTimeout(install,0),{once:true});else setTimeout(install,0);
+  document.addEventListener('bdsm-education-tasks-updated',install);
+})();
+
+</script>
+<script>
+(()=>{
+  if(window.__bdsmWrittenNotesInstalled)return;
+  window.__bdsmWrittenNotesInstalled=true;
+  const KEY='bdsm-app-written-notes-v1',OFF='bdsm-app-offences-v1',EVENTS='bdsm-app-events-v3',TASKS='bdsm-app-education-tasks-v1';
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
+  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const uid=()=> 'UW-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+  const nowLocal=()=>{const d=new Date(),z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`};
+  const fmt=v=>{if(!v)return '—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pl-PL')};
+  const opts=(arr,id,label)=>arr.map(x=>`<option value="${esc(x[id]||x.id||x.event_id||x.task_id||'')}">${esc(label(x))}</option>`).join('');
+  function ensureUI(){
+    const nav=document.querySelector('#nav'),content=document.querySelector('.content');if(!nav||!content)return;
+    if(!document.querySelector('#writtenNotesNav')){const b=document.createElement('button');b.id='writtenNotesNav';b.type='button';b.dataset.view='written-notes';b.innerHTML='📝 Uwagi / upomnienia';const e=document.querySelector('#eduTasksNav');if(e&&e.nextSibling)nav.insertBefore(b,e.nextSibling);else nav.appendChild(b);b.addEventListener('click',x=>{x.preventDefault();openView()})}
+    if(!document.querySelector('#view-written-notes')){const s=document.createElement('section');s.id='view-written-notes';s.className='hidden';s.innerHTML=`<div class="panel"><h3>📝 Uwagi / upomnienia pisemne</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Pisemna uwaga lub upomnienie może zostać powiązane z przewinieniem, karą/szlabaniem albo zadaniem. Sam wpis niczego automatycznie nie zaostrza.</p><div class="form-grid"><div class="field"><label>Rodzaj</label><select id="noteType"><option value="uwaga">Uwaga</option><option value="upomnienie pisemne">Upomnienie pisemne</option><option value="ostrzeżenie">Ostrzeżenie</option></select></div><div class="field"><label>Data i godzina</label><input id="noteWhen" type="datetime-local"></div><div class="field"><label>Status</label><select id="noteStatus"><option value="aktywne">Aktywne</option><option value="zamknięte">Zamknięte</option><option value="anulowane">Anulowane</option></select></div><div class="field"><label>Przewinienie</label><select id="noteOff"><option value="">— brak —</option></select></div><div class="field"><label>Kara / szlaban</label><select id="noteEvent"><option value="">— brak —</option></select></div><div class="field"><label>Zadanie edukacyjne</label><select id="noteTask"><option value="">— brak —</option></select></div><div class="field span3"><label>Tytuł</label><input id="noteTitle" placeholder="np. Upomnienie za niedotrzymanie ustaleń"></div><div class="field span3"><label>Treść</label><textarea id="noteBody" placeholder="Treść uwagi lub upomnienia"></textarea></div><div class="field span3"><label><input id="noteAck" type="checkbox"> Potwierdzono zapoznanie się z treścią</label></div></div><div class="actions"><button class="btn primary" id="noteSave">Zapisz uwagę</button></div><div id="noteStats" style="margin:14px 0 6px"></div><div id="noteTable"></div></div>`;content.appendChild(s);s.querySelector('#noteWhen').value=nowLocal();s.querySelector('#noteSave').addEventListener('click',save);s.addEventListener('click',e=>{const c=e.target.closest('[data-note-close]');if(c)close(c.dataset.noteClose);const d=e.target.closest('[data-note-delete]');if(d)del(d.dataset.noteDelete)})}
+  }
+  function refreshOptions(){const o=document.querySelector('#noteOff'),ev=document.querySelector('#noteEvent'),t=document.querySelector('#noteTask');if(o){const v=o.value;o.innerHTML='<option value="">— brak —</option>'+opts(read(OFF,[]),'offence_id',x=>`${x.offence_id} — ${x.title}`);o.value=v}if(ev){const v=ev.value;ev.innerHTML='<option value="">— brak —</option>'+opts(read(EVENTS,[]).filter(x=>['kara','szlaban'].includes(String(x.type||'').toLowerCase())),'event_id',x=>`${x.type} — ${x.title||x.event_id||x.id}`);ev.value=v}if(t){const v=t.value;t.innerHTML='<option value="">— brak —</option>'+opts(read(TASKS,[]),'task_id',x=>`${x.task_id} — ${x.title}`);t.value=v}}
+  function openView(){ensureUI();refreshOptions();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-written-notes')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#writtenNotesNav')?.classList.add('active');render()}
+  function save(){const title=document.querySelector('#noteTitle')?.value.trim(),body=document.querySelector('#noteBody')?.value.trim();if(!title||!body)return;const item={note_id:uid(),type:document.querySelector('#noteType').value,title,body,status:document.querySelector('#noteStatus').value,issued_at:document.querySelector('#noteWhen').value?new Date(document.querySelector('#noteWhen').value).toISOString():new Date().toISOString(),offence_id:document.querySelector('#noteOff').value||null,event_id:document.querySelector('#noteEvent').value||null,task_id:document.querySelector('#noteTask').value||null,acknowledged:!!document.querySelector('#noteAck').checked,created_at:new Date().toISOString(),updated_at:new Date().toISOString()};const data=read(KEY,[]);data.unshift(item);write(KEY,data);document.querySelector('#noteTitle').value='';document.querySelector('#noteBody').value='';document.querySelector('#noteAck').checked=false;document.querySelector('#noteWhen').value=nowLocal();render();document.dispatchEvent(new CustomEvent('bdsm-written-notes-updated',{detail:{note_id:item.note_id}}))}
+  function close(id){const d=read(KEY,[]),x=d.find(v=>v.note_id===id);if(x){x.status='zamknięte';x.updated_at=new Date().toISOString();write(KEY,d);render()}}
+  function del(id){write(KEY,read(KEY,[]).filter(x=>x.note_id!==id));render()}
+  function render(){const data=read(KEY,[]),box=document.querySelector('#noteTable'),stats=document.querySelector('#noteStats');if(!box)return;if(stats)stats.innerHTML=`Aktywne: <strong>${data.filter(x=>x.status==='aktywne').length}</strong> &nbsp; Potwierdzone: <strong>${data.filter(x=>x.acknowledged).length}</strong> &nbsp; Łącznie: <strong>${data.length}</strong>`;if(!data.length){box.innerHTML='<div class="empty">Brak uwag i upomnień.</div>';return}box.innerHTML=`<div style="overflow:auto"><table class="table"><thead><tr><th>Data</th><th>Rodzaj</th><th>Tytuł / treść</th><th>Powiązania</th><th>Potwierdzenie</th><th>Status</th><th>Akcja</th></tr></thead><tbody>${data.map(x=>`<tr><td>${fmt(x.issued_at)}</td><td>${esc(x.type)}</td><td><strong>${esc(x.title)}</strong><div style="color:#98a2b3;margin-top:3px;max-width:440px;white-space:pre-wrap">${esc(x.body)}</div><div style="font-family:monospace;font-size:10px;color:#768197">${esc(x.note_id)}</div></td><td>${[x.offence_id&&'⚠ '+x.offence_id,x.event_id&&'🔗 '+x.event_id,x.task_id&&'📚 '+x.task_id].filter(Boolean).map(esc).join('<br>')||'—'}</td><td>${x.acknowledged?'✓ Zapoznano':'—'}</td><td>${esc(x.status)}</td><td>${x.status==='aktywne'?`<button class="btn" data-note-close="${esc(x.note_id)}">Zamknij</button>`:''} <button class="btn danger" data-note-delete="${esc(x.note_id)}">Usuń</button></td></tr>`).join('')}</tbody></table></div>`}
+  function install(){ensureUI();refreshOptions();render();window.bdsmWrittenNotes={list:()=>read(KEY,[]),open:openView};document.addEventListener('bdsm-offences-updated',refreshOptions);document.addEventListener('bdsm-education-tasks-updated',refreshOptions)}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
 
