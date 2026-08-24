@@ -10,6 +10,7 @@ on:
       - 'bdsm-app/invite-status-central.js'
       - 'bdsm-app/email-panel-force-open.js'
       - 'bdsm-app/offences-module.js'
+      - 'bdsm-app/deadlines-module.js'
 permissions:
   contents: write
 jobs:
