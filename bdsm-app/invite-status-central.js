@@ -1,6 +1,5 @@
 (() => {
   const API='https://hook.eu1.make.com/gw8nr0beqtbymtd2xgiga3wn7qfjhp25';
-  const FALLBACK_PERSON='cisowianka20@gmail.com';
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
   const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const logKey='bdsm-app-invite-log-v1';
@@ -10,59 +9,62 @@
   function setOnlineState(ok=true){
     const txt=document.querySelector('#syncText');
     const dot=document.querySelector('#syncDot');
-    if(ok){
-      if(txt) txt.textContent='Online — połączono';
-      if(dot) dot.className='sync-dot ok';
-    }else{
-      if(txt) txt.textContent='Tryb lokalny — brak połączenia';
-      if(dot) dot.className='sync-dot';
-    }
+    if(ok){if(txt)txt.textContent='Online — połączono';if(dot)dot.className='sync-dot ok';}
+    else{if(txt)txt.textContent='Tryb lokalny — brak połączenia';if(dot)dot.className='sync-dot';}
   }
 
-  async function pullOne(person){
-    const accountId=cloud().accountId;
-    if(!accountId||!person)return null;
-    const r=await fetch(API,{
-      method:'POST',mode:'cors',cache:'no-store',credentials:'omit',
-      headers:{'Content-Type':'application/json','Accept':'application/json'},
-      body:JSON.stringify({action:'invite_status',person,accountId,clientTime:new Date().toISOString()})
-    });
-    if(!r.ok)throw new Error('HTTP '+r.status);
-    setOnlineState(true);
-    const data=await r.json();
-    if(data&&data.status==='sent'&&data.messageId){
-      const log=read(logKey,{});
-      log[person]={...(log[person]||{}),status:'sent',messageId:data.messageId,sentAt:data.sentAt||new Date().toISOString(),source:'central'};
-      write(logKey,log);
-      return data;
+  function normalizePayload(data){
+    let x=data;
+    for(let i=0;i<3;i++){
+      if(typeof x==='string'){try{x=JSON.parse(x);}catch(_){break;}}
+      else if(x&&typeof x==='object'&&typeof x.body==='string'){try{x=JSON.parse(x.body);}catch(_){break;}}
+      else break;
     }
-    return null;
+    return x;
   }
 
   async function refreshCentral(){
     if(refreshing)return;
+    const accountId=cloud().accountId;
+    if(!accountId)return;
     refreshing=true;
     try{
-      let list=read('bdsm-app-access',[]).filter(x=>x&&x.person&&!x.revoked);
-      if(!list.length) list=[{person:FALLBACK_PERSON,role:'user'}];
-      const unique=[...new Map(list.map(x=>[String(x.person).toLowerCase(),x])).values()];
-      const results=await Promise.allSettled(unique.map(x=>pullOne(x.person)));
-      const anySuccess=results.some(r=>r.status==='fulfilled');
-      setOnlineState(anySuccess);
+      const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'invite_history',accountId,clientTime:new Date().toISOString()})});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      let raw; try{raw=await r.json();}catch(_){raw=await r.text();}
+      const data=normalizePayload(raw);
+      const values=Array.isArray(data?.values)?data.values:(Array.isArray(data)?data:[]);
+      const log=read(logKey,{});
+      let changed=false;
+      for(const row of values){
+        if(!Array.isArray(row)||row.length<4)continue;
+        const key=String(row[0]||'');
+        const rowAccount=String(row[3]||'');
+        if(!key.startsWith('invite_sent:')||rowAccount!==String(accountId))continue;
+        const person=key.slice('invite_sent:'.length).trim();
+        if(!person)continue;
+        const messageId=String(row[1]||'').trim();
+        const sentAt=String(row[2]||'').trim();
+        log[person]={...(log[person]||{}),status:'sent',messageId:messageId||'—',sentAt:sentAt||null,source:'central',error:null};
+        changed=true;
+      }
+      if(changed)write(logKey,log);
+      setOnlineState(true);
       document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'));
-    } finally {
-      refreshing=false;
-    }
+    }catch(e){
+      console.warn('invite_history',e);
+      setOnlineState(false);
+    }finally{refreshing=false;}
   }
 
+  function panelOpen(){const s=document.querySelector('#view-email-invites');return !!s&&!s.classList.contains('hidden')&&s.style.display!=='none';}
   function install(){
-    const nav=document.querySelector('#emailInvitesNav');
-    if(nav&&!nav.dataset.centralInviteInstalled){
-      nav.dataset.centralInviteInstalled='1';
-      nav.addEventListener('click',()=>setTimeout(refreshCentral,50));
-    }
-    setTimeout(refreshCentral,800);
+    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(refreshCentral,60);},true);
+    document.addEventListener('bdsm-sync-complete',()=>setTimeout(refreshCentral,250));
+    window.addEventListener('focus',()=>{if(panelOpen())refreshCentral();});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden&&panelOpen())refreshCentral();});
+    setInterval(()=>{if(panelOpen())refreshCentral();},60000);
+    setTimeout(refreshCentral,900);
   }
-
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
 })();
