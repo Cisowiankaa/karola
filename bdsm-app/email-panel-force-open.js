@@ -1,6 +1,6 @@
 (() => {
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
-  const fmt=v=>v?new Date(v).toLocaleString('pl-PL'):'—';
+  const fmt=v=>{if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pl-PL')};
   function badge(s){const m={sent:['Wysłano','#12351f','#7ee2a8'],sending:['Wysyłanie…','#33270f','#ffd36f'],error:['Błąd','#3a171d','#ff929c'],pending:['Oczekuje','#202735','#c6cedb']};const [t,b,c]=m[s]||m.pending;return `<span style="display:inline-block;padding:5px 8px;border-radius:8px;background:${b};color:${c};font-size:11px;font-weight:700">${t}</span>`}
   function ensureSection(){
     let sec=document.querySelector('#view-email-invites');
@@ -20,7 +20,7 @@
     Object.keys(log).forEach(p=>{const k=p.toLowerCase();if(!map.has(k))map.set(k,{person:p,role:'—',centralOnly:true})});
     if(!map.size)map.set('cisowianka20@gmail.com',{person:'cisowianka20@gmail.com',role:'—',centralOnly:true});
     const list=[...map.values()];
-    const rows=list.map(x=>{const key=Object.keys(log).find(k=>k.toLowerCase()===String(x.person).toLowerCase());const st=key?log[key]:{status:'pending'};return `<tr><td>${x.person}</td><td>${x.role||'—'}</td><td>${badge(st.status)}</td><td>${fmt(st.sentAt||st.lastAttemptAt)}</td><td style="font-family:monospace;font-size:11px">${st.messageId||'—'}</td><td>${st.source==='central'?'Baza centralna':'Lokalny'}</td></tr>`}).join('');
+    const rows=list.map(x=>{const key=Object.keys(log).find(k=>k.toLowerCase()===String(x.person).toLowerCase());const st=key?log[key]:{status:'pending'};const msg=(st.messageId&&st.messageId!=='14.1')?st.messageId:'—';return `<tr><td>${x.person}</td><td>${x.role||'—'}</td><td>${badge(st.status)}</td><td>${fmt(st.sentAt||st.lastAttemptAt)}</td><td style="font-family:monospace;font-size:11px">${msg}</td><td>${st.source==='central'?'Baza centralna':'Lokalny'}</td></tr>`}).join('');
     const sent=list.filter(x=>{const k=Object.keys(log).find(y=>y.toLowerCase()===String(x.person).toLowerCase());return k&&log[k].status==='sent'}).length;
     if(stats)stats.innerHTML=`Wysłano: <strong>${sent}</strong> &nbsp; Łącznie: <strong>${list.length}</strong>`;
     if(table)table.innerHTML=`<div style="overflow:auto"><table class="table"><thead><tr><th>Adres</th><th>Rola</th><th>Status</th><th>Data</th><th>Message ID</th><th>Źródło</th></tr></thead><tbody>${rows}</tbody></table></div>`;
