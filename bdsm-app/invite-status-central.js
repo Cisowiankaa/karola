@@ -1,4 +1,7 @@
 (() => {
+  if (window.__bdsmInviteHistoryInstalled) return;
+  window.__bdsmInviteHistoryInstalled = true;
+
   const API='https://hook.eu1.make.com/gw8nr0beqtbymtd2xgiga3wn7qfjhp25';
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
   const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
@@ -49,9 +52,11 @@
         const next={...prev,status:'sent',messageId:messageId||'—',sentAt:sentAt||null,source:'central',error:null};
         if(JSON.stringify(prev)!==JSON.stringify(next)){log[person]=next;changed=true;}
       }
-      if(changed)write(logKey,log);
+      if(changed){
+        write(logKey,log);
+        document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'));
+      }
       setOnlineState(true);
-      document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'));
     }catch(e){
       console.warn('invite_history',e);
       setOnlineState(false);
@@ -60,13 +65,13 @@
 
   function panelOpen(){const s=document.querySelector('#view-email-invites');return !!s&&!s.classList.contains('hidden')&&s.style.display!=='none';}
   function install(){
-    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(refreshCentral,60);},true);
-    document.addEventListener('bdsm-sync-complete',()=>setTimeout(refreshCentral,250));
+    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(refreshCentral,80);},true);
+    document.addEventListener('bdsm-sync-complete',()=>setTimeout(refreshCentral,300));
     window.addEventListener('focus',()=>{if(panelOpen())refreshCentral();});
     document.addEventListener('visibilitychange',()=>{if(!document.hidden&&panelOpen())refreshCentral();});
-    setInterval(()=>{if(panelOpen())refreshCentral();},5000);
-    setTimeout(refreshCentral,900);
+    setInterval(()=>{if(panelOpen())refreshCentral();},30000);
+    setTimeout(refreshCentral,1200);
     window.bdsmRefreshInviteHistory=refreshCentral;
   }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
