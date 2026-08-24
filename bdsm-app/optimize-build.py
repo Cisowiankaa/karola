@@ -80,10 +80,9 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-modules = [sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, hourly_reports]
-runtime = '<!-- BDSM_RUNTIME_INLINE_START -->\n' + '\n'.join('<script>\n'+m+'\n</script>' for m in modules) + '\n<!-- BDSM_RUNTIME_INLINE_END -->'
+runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, hourly_reports)
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: runtime + relationship timeline + full monthly PDF + safety')
+print('Optimized BDSM index: runtime + offences + deadlines + education + notes + relationship timeline + hourly reports + safety')
