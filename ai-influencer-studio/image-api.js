@@ -1,5 +1,6 @@
 (() => {
   const HISTORY_KEY='aii-photo-history';
+  const API_URL='https://ai-influencer-studio-api.vercel.app/api/generate-image';
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const toast=t=>window.showToast?window.showToast(t):alert(t);
@@ -30,7 +31,7 @@
       if(preview)preview.innerHTML='<span>Generowanie obrazu AI…</span>';
       if(result)result.innerHTML='<pre>Łączenie z bezpiecznym backendem OpenAI…</pre>';
       try{
-        const response=await fetch('/api/generate-image',{
+        const response=await fetch(API_URL,{
           method:'POST',
           headers:{'Content-Type':'application/json'},
           body:JSON.stringify({prompt,format})
