@@ -58,8 +58,353 @@ const accessKey='bdsm-app-access';let accessList=JSON.parse(localStorage.getItem
 function renderAccess(){const box=$('#accessList');box.innerHTML=accessList.length?accessList.map((a,i)=>`<div class="item"><div class="item-icon">${a.role==='viewer'?'👁':'✎'}</div><div><div class="title">${a.person}</div><div class="meta">${a.role==='viewer'?'Podgląd — tylko odczyt':'Użytkownik — dodawanie i edycja'}</div></div><button class="btn" onclick="removeAccess(${i})">Usuń</button></div>`).join(''):'<div class="empty">Brak dodanych osób</div>'}window.removeAccess=i=>{accessList.splice(i,1);localStorage.setItem(accessKey,JSON.stringify(accessList));renderAccess()};$('#addAccess').onclick=()=>{const person=$('#accessPerson').value.trim();if(!person)return;accessList.push({person,role:$('#accessRole').value,createdAt:new Date().toISOString()});localStorage.setItem(accessKey,JSON.stringify(accessList));$('#accessPerson').value='';renderAccess()};
 async function cloudSync(){const dot=$('#syncDot'),txt=$('#syncText');txt.textContent='Wysyłanie do Make…';try{const r=await fetch(cloud.apiBase,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'sync',accountId:cloud.accountId,events,rules,accessList,clientTime:new Date().toISOString()})});if(!r.ok)throw new Error('HTTP '+r.status);txt.textContent='Online — Make odebrał dane';dot.className='sync-dot ok'}catch(e){txt.textContent='Brak połączenia z backendem';dot.className='sync-dot';console.warn(e)}}$('#syncNow').onclick=cloudSync;
 $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry').value=rules.carryover;$('#ruleGood').value=rules.good;$('#ruleVeryGood').value=rules.veryGood;makeForm($('#quickForm'),true);makeForm($('#fullForm'),false);renderAccess();renderAll();
-</script><script src="https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@99abda2b81207bb71978fcd41bb1552f6aec09b4/bdsm-app/sync-fix-v3.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@5e1fd96c12974f658af55d76eff281c83ee37a5b/bdsm-app/invite-status-central.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@8c42c24b48bd94426ebc9c9ea866ebf5a53d1c2f/bdsm-app/email-panel-force-open.js"></script>
-<script src="https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central.js?v=20260824-2030"></script>
+</script>
+
+<!-- BDSM_RUNTIME_INLINE_START -->
+<script>
+(() => {
+  const API = 'https://hook.eu1.make.com/gw8nr0beqtbymtd2xgiga3wn7qfjhp25';
+  const $ = (s) => document.querySelector(s);
+  const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+  const INVITE_LOG_KEY = 'bdsm-app-invite-log-v1';
+  const readJSON = (key, fallback) => { try { return JSON.parse(localStorage.getItem(key) || JSON.stringify(fallback)); } catch (_) { return fallback; } };
+  const writeJSON = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+  const accessList = () => readJSON('bdsm-app-access', []);
+  const readInviteLog = () => readJSON(INVITE_LOG_KEY, {});
+
+  function updateInviteStatus(person, patch) {
+    if (!person) return;
+    const log = readInviteLog();
+    log[person] = { ...(log[person] || {}), ...patch };
+    writeJSON(INVITE_LOG_KEY, log);
+    renderEmailPanel();
+  }
+
+  async function postSync(payload, attempt = 1) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 12000);
+    try {
+      const response = await fetch(API, {method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload),signal:controller.signal});
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      let data = null; try { data = await response.json(); } catch (_) {}
+      return {ok:true,data};
+    } catch (error) {
+      if (attempt < 2) { await sleep(700); return postSync(payload, attempt + 1); }
+      throw error;
+    } finally { clearTimeout(timer); }
+  }
+
+  function getCloud() {
+    const key='bdsm-app-cloud-config';
+    let cloud=readJSON(key,null);
+    if(!cloud) cloud={accountId:'ACC-'+Math.random().toString(36).slice(2,10)};
+    cloud.apiBase=API; cloud.enabled=true; writeJSON(key,cloud); return cloud;
+  }
+
+  const fmtDate = value => { if(!value) return '—'; const d=new Date(value); return Number.isNaN(d.getTime())?'—':d.toLocaleString('pl-PL'); };
+  function statusBadge(status) {
+    const map={sent:['Wysłano','#12351f','#7ee2a8'],sending:['Wysyłanie…','#33270f','#ffd36f'],error:['Błąd','#3a171d','#ff929c'],pending:['Oczekuje','#202735','#c6cedb']};
+    const [label,bg,fg]=map[status]||map.pending;
+    return `<span style="display:inline-block;padding:5px 8px;border-radius:8px;background:${bg};color:${fg};font-size:11px;font-weight:700">${label}</span>`;
+  }
+
+  async function resendInvite(person) {
+    const item=accessList().find(x=>x.person===person&&!x.revoked);
+    if(!item) return;
+    const cloud=getCloud();
+    const requestId='INVITE-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+    updateInviteStatus(person,{status:'sending',lastAttemptAt:new Date().toISOString(),requestId,error:null});
+    try {
+      await postSync({action:'sync',requestId,accountId:cloud.accountId,events:[],rules:{},accessList:[item],clientTime:new Date().toISOString()});
+      updateInviteStatus(person,{status:'sent',sentAt:new Date().toISOString(),requestId,error:null});
+      document.dispatchEvent(new CustomEvent('bdsm-sync-complete'));
+    } catch(error) {
+      updateInviteStatus(person,{status:'error',lastAttemptAt:new Date().toISOString(),requestId,error:error.message||String(error)});
+    }
+  }
+
+  function showEmailPanel() {
+    const nav=$('#nav'), section=$('#view-email-invites');
+    if(!nav||!section) return;
+    document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));
+    section.classList.remove('hidden');
+    nav.querySelectorAll('button').forEach(b=>b.classList.remove('active'));
+    const btn=$('#emailInvitesNav'); if(btn) btn.classList.add('active');
+    renderEmailPanel();
+  }
+
+  function installEmailPanel() {
+    const nav=$('#nav'),content=$('.content');
+    if(!nav||!content||$('#emailInvitesNav')) return;
+    const accessBtn=[...nav.querySelectorAll('button')].find(b=>b.dataset.view==='access');
+    const btn=document.createElement('button');
+    btn.id='emailInvitesNav'; btn.type='button'; btn.dataset.view='email-invites'; btn.innerHTML='✉ E-maile / Zaproszenia';
+    if(accessBtn&&accessBtn.nextSibling) nav.insertBefore(btn,accessBtn.nextSibling); else nav.appendChild(btn);
+    const section=document.createElement('section');
+    section.id='view-email-invites'; section.className='hidden';
+    section.innerHTML='<div class="panel"><h3>E-maile / Zaproszenia</h3><p style="color:#98a2b3;font-size:12px;margin-top:-4px">Statusy z lokalnej aplikacji i centralnej bazy.</p><div id="emailInviteStats" style="margin:12px 0"></div><div id="emailInviteTable"></div></div>';
+    content.appendChild(section);
+    btn.addEventListener('click',(e)=>{e.preventDefault();e.stopPropagation();showEmailPanel();});
+    section.addEventListener('click',e=>{const resend=e.target.closest('[data-resend-invite]');if(resend)resendInvite(decodeURIComponent(resend.dataset.resendInvite));});
+    renderEmailPanel();
+  }
+
+  function renderEmailPanel() {
+    const table=$('#emailInviteTable'),stats=$('#emailInviteStats'); if(!table) return;
+    const local=accessList(),log=readInviteLog();
+    const byPerson=new Map();
+    local.forEach(item=>{if(item&&item.person)byPerson.set(String(item.person).toLowerCase(),item);});
+    Object.keys(log).forEach(person=>{const key=String(person).toLowerCase();if(!byPerson.has(key))byPerson.set(key,{person,role:'—',centralOnly:true});});
+    const list=[...byPerson.values()];
+    const rows=list.map(item=>{
+      const st=log[item.person]||log[Object.keys(log).find(k=>k.toLowerCase()===String(item.person).toLowerCase())]||{status:'pending'};
+      const when=st.sentAt||st.lastAttemptAt||null;
+      const messageId=(st.messageId&&st.messageId!=='14.1')?st.messageId:'—';
+      const canResend=!item.centralOnly&&!item.revoked;
+      return `<tr><td>${item.person||'—'}</td><td>${item.role||'—'}</td><td>${statusBadge(st.status)}</td><td>${fmtDate(when)}</td><td style="font-family:monospace;font-size:11px">${messageId}</td><td>${st.source==='central'?'Baza centralna':'Lokalny'}</td><td>${st.error?`<span style="color:#ff929c">${st.error}</span>`:'—'}</td><td>${canResend?`<button class="btn" data-resend-invite="${encodeURIComponent(item.person||'')}">Wyślij ponownie</button>`:'—'}</td></tr>`;
+    }).join('');
+    const sent=list.filter(i=>{const k=Object.keys(log).find(x=>x.toLowerCase()===String(i.person).toLowerCase());return k&&(log[k]||{}).status==='sent';}).length;
+    const errors=list.filter(i=>{const k=Object.keys(log).find(x=>x.toLowerCase()===String(i.person).toLowerCase());return k&&(log[k]||{}).status==='error';}).length;
+    const pending=Math.max(0,list.length-sent-errors);
+    if(stats) stats.innerHTML=`<span style="margin-right:14px">Wysłano: <strong>${sent}</strong></span><span style="margin-right:14px">Oczekuje: <strong>${pending}</strong></span><span style="margin-right:14px">Błędy: <strong>${errors}</strong></span><span>Łącznie: <strong>${list.length}</strong></span>`;
+    table.innerHTML=rows?`<div style="overflow:auto"><table class="table"><thead><tr><th>Adres</th><th>Rola</th><th>Status</th><th>Data</th><th>Message ID</th><th>Źródło</th><th>Błąd</th><th>Akcja</th></tr></thead><tbody>${rows}</tbody></table></div>`:'<div class="empty">Brak zaproszeń.</div>';
+  }
+
+  function install() {
+    installEmailPanel();
+    document.addEventListener('bdsm-invite-status-updated',renderEmailPanel);
+    const btn=$('#syncNow'); if(!btn) return;
+    const replacement=btn.cloneNode(true); btn.replaceWith(replacement);
+    replacement.addEventListener('click',async()=>{
+      const dot=$('#syncDot'),txt=$('#syncText'),cloud=getCloud();
+      const events=readJSON('bdsm-app-events-v3',[]),rules=readJSON('bdsm-app-rules-v3',{}),list=accessList(),log=readInviteLog();
+      const pendingInvites=list.filter(x=>!x.revoked&&(log[x.person]||{}).status!=='sent');
+      const requestId='SYNC-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+      const payload={action:'sync',requestId,accountId:cloud.accountId,events,rules,accessList:pendingInvites,clientTime:new Date().toISOString()};
+      replacement.disabled=true;
+      pendingInvites.forEach(x=>updateInviteStatus(x.person,{status:'sending',lastAttemptAt:new Date().toISOString(),requestId,error:null}));
+      if(txt) txt.textContent=pendingInvites.length?`Synchronizacja… ${requestId}`:'Synchronizacja danych — brak nowych zaproszeń';
+      if(dot) dot.className='sync-dot';
+      try {
+        const result=await postSync(payload);
+        writeJSON('bdsm-app-last-sync',{requestId,at:new Date().toISOString(),result:result.data||null});
+        const sentAt=new Date().toISOString();
+        pendingInvites.forEach(x=>updateInviteStatus(x.person,{status:'sent',sentAt,requestId,error:null}));
+        if(txt) txt.textContent='Online — zapis potwierdzony • '+new Date().toLocaleTimeString('pl-PL');
+        if(dot) dot.className='sync-dot ok';
+        document.dispatchEvent(new CustomEvent('bdsm-sync-complete'));
+      } catch(error) {
+        pendingInvites.forEach(x=>updateInviteStatus(x.person,{status:'error',lastAttemptAt:new Date().toISOString(),requestId,error:error.message||String(error)}));
+        if(txt) txt.textContent='Błąd synchronizacji: '+(error.name==='AbortError'?'timeout':error.message);
+        if(dot) dot.className='sync-dot';
+      } finally { replacement.disabled=false; }
+    });
+  }
+
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',install); else install();
+})();
+// trigger stabilized sync v5 2026-08-25T00:10+02:00
+
+</script>
+<script>
+(() => {
+  if (window.__bdsmInviteHistoryInstalled) return;
+  window.__bdsmInviteHistoryInstalled = true;
+
+  const API='https://hook.eu1.make.com/gw8nr0beqtbymtd2xgiga3wn7qfjhp25';
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
+  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const logKey='bdsm-app-invite-log-v1';
+  const cloud=()=>read('bdsm-app-cloud-config',{});
+  let refreshing=false;
+
+  function setOnlineState(ok=true){
+    const txt=document.querySelector('#syncText');
+    const dot=document.querySelector('#syncDot');
+    if(ok){if(txt)txt.textContent='Online — połączono';if(dot)dot.className='sync-dot ok';}
+    else{if(txt)txt.textContent='Tryb lokalny — brak połączenia';if(dot)dot.className='sync-dot';}
+  }
+
+  function normalizePayload(data){
+    let x=data;
+    for(let i=0;i<4;i++){
+      if(typeof x==='string'){try{x=JSON.parse(x);}catch(_){break;}}
+      else if(x&&typeof x==='object'&&typeof x.body==='string'){try{x=JSON.parse(x.body);}catch(_){break;}}
+      else break;
+    }
+    return x;
+  }
+
+  async function refreshCentral(){
+    if(refreshing)return;
+    const accountId=cloud().accountId;
+    if(!accountId)return;
+    refreshing=true;
+    try{
+      const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'invite_history',accountId,clientTime:new Date().toISOString(),requestId:'HIST-'+Date.now()})});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      let raw; try{raw=await r.json();}catch(_){raw=await r.text();}
+      const data=normalizePayload(raw);
+      const values=Array.isArray(data?.values)?data.values:(Array.isArray(data)?data:[]);
+      const log=read(logKey,{});
+      let changed=false;
+      for(const row of values){
+        if(!Array.isArray(row)||row.length<4)continue;
+        const key=String(row[0]||'');
+        const rowAccount=String(row[3]||'');
+        if(!key.startsWith('invite_sent:')||rowAccount!==String(accountId))continue;
+        const person=key.slice('invite_sent:'.length).trim();
+        if(!person)continue;
+        const messageId=String(row[1]||'').trim();
+        const sentAt=String(row[2]||'').trim();
+        const prev=log[person]||{};
+        const next={...prev,status:'sent',messageId:messageId||'—',sentAt:sentAt||null,source:'central',error:null};
+        if(JSON.stringify(prev)!==JSON.stringify(next)){log[person]=next;changed=true;}
+      }
+      if(changed){
+        write(logKey,log);
+        document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'));
+      }
+      setOnlineState(true);
+    }catch(e){
+      console.warn('invite_history',e);
+      setOnlineState(false);
+    }finally{refreshing=false;}
+  }
+
+  function panelOpen(){const s=document.querySelector('#view-email-invites');return !!s&&!s.classList.contains('hidden')&&s.style.display!=='none';}
+
+  function installSafetyCompact(){
+    if(window.__bdsmSafetyCompactInstalled)return;
+    const panel=document.querySelector('.safety');
+    if(!panel)return;
+    window.__bdsmSafetyCompactInstalled=true;
+
+    const style=document.createElement('style');
+    style.textContent=`
+      .safety{transition:.2s ease;overflow:hidden}
+      .safety.safety-collapsed{padding:10px 12px;max-height:48px;cursor:pointer}
+      .safety.safety-collapsed h3{margin:0;font-size:13px;display:flex;align-items:center;justify-content:space-between}
+      .safety.safety-collapsed h3::after{content:'⌃';font-size:12px;color:#98a2b3}
+      .safety.safety-collapsed p,.safety.safety-collapsed .panic{display:none}
+      .safety:not(.safety-collapsed) h3{cursor:pointer;display:flex;align-items:center;justify-content:space-between}
+      .safety:not(.safety-collapsed) h3::after{content:'⌄';font-size:12px;color:#98a2b3}
+    `;
+    document.head.appendChild(style);
+
+    const apply=(collapsed)=>{
+      panel.classList.toggle('safety-collapsed',collapsed);
+      localStorage.setItem('bdsm-app-safety-collapsed',collapsed?'1':'0');
+      panel.setAttribute('aria-expanded',collapsed?'false':'true');
+    };
+
+    const saved=localStorage.getItem('bdsm-app-safety-collapsed');
+    apply(saved===null ? true : saved==='1');
+
+    const toggle=(e)=>{
+      if(e.target.closest('#panic'))return;
+      if(e.target.closest('h3') || panel.classList.contains('safety-collapsed')){
+        apply(!panel.classList.contains('safety-collapsed'));
+      }
+    };
+    panel.addEventListener('click',toggle);
+  }
+
+  function install(){
+    installSafetyCompact();
+    document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(refreshCentral,80);},true);
+    document.addEventListener('bdsm-sync-complete',()=>setTimeout(refreshCentral,300));
+    window.addEventListener('focus',()=>{if(panelOpen())refreshCentral();});
+    document.addEventListener('visibilitychange',()=>{if(!document.hidden&&panelOpen())refreshCentral();});
+    setInterval(()=>{if(panelOpen())refreshCentral();},30000);
+    setTimeout(refreshCentral,1200);
+    window.bdsmRefreshInviteHistory=refreshCentral;
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+</script>
+<script>
+(() => {
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
+  const fmt=v=>{if(!v)return'—';const d=new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleString('pl-PL')};
+  function badge(s){const m={sent:['Wysłano','#12351f','#7ee2a8'],sending:['Wysyłanie…','#33270f','#ffd36f'],error:['Błąd','#3a171d','#ff929c'],pending:['Oczekuje','#202735','#c6cedb']};const [t,b,c]=m[s]||m.pending;return `<span style="display:inline-block;padding:5px 8px;border-radius:8px;background:${b};color:${c};font-size:11px;font-weight:700">${t}</span>`}
+  function ensureSection(){
+    let sec=document.querySelector('#view-email-invites');
+    if(!sec){
+      const content=document.querySelector('.content'); if(!content)return null;
+      sec=document.createElement('section'); sec.id='view-email-invites'; sec.className='hidden';
+      sec.innerHTML='<div class="panel"><h3>E-maile / Zaproszenia</h3><p style="color:#98a2b3;font-size:12px">Centralny podgląd wysyłki zaproszeń.</p><div id="emailInviteStats" style="margin:12px 0"></div><div id="emailInviteTable"></div></div>';
+      content.appendChild(sec);
+    }
+    return sec;
+  }
+  function render(){
+    const sec=ensureSection(); if(!sec)return;
+    const table=sec.querySelector('#emailInviteTable'),stats=sec.querySelector('#emailInviteStats');
+    const local=read('bdsm-app-access',[]),log=read('bdsm-app-invite-log-v1',{}),map=new Map();
+    local.forEach(x=>x&&x.person&&map.set(String(x.person).toLowerCase(),x));
+    Object.keys(log).forEach(p=>{const k=p.toLowerCase();if(!map.has(k))map.set(k,{person:p,role:'—',centralOnly:true})});
+    if(!map.size)map.set('cisowianka20@gmail.com',{person:'cisowianka20@gmail.com',role:'—',centralOnly:true});
+    const list=[...map.values()];
+    const rows=list.map(x=>{const key=Object.keys(log).find(k=>k.toLowerCase()===String(x.person).toLowerCase());const st=key?log[key]:{status:'pending'};const msg=(st.messageId&&st.messageId!=='14.1')?st.messageId:'—';return `<tr><td>${x.person}</td><td>${x.role||'—'}</td><td>${badge(st.status)}</td><td>${fmt(st.sentAt||st.lastAttemptAt)}</td><td style="font-family:monospace;font-size:11px">${msg}</td><td>${st.source==='central'?'Baza centralna':'Lokalny'}</td></tr>`}).join('');
+    const sent=list.filter(x=>{const k=Object.keys(log).find(y=>y.toLowerCase()===String(x.person).toLowerCase());return k&&log[k].status==='sent'}).length;
+    if(stats)stats.innerHTML=`Wysłano: <strong>${sent}</strong> &nbsp; Łącznie: <strong>${list.length}</strong>`;
+    if(table)table.innerHTML=`<div style="overflow:auto"><table class="table"><thead><tr><th>Adres</th><th>Rola</th><th>Status</th><th>Data</th><th>Message ID</th><th>Źródło</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  function openPanel(e){
+    const btn=e.target.closest&&e.target.closest('#emailInvitesNav'); if(!btn)return;
+    e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation)e.stopImmediatePropagation();
+    const sec=ensureSection(); if(!sec)return;
+    document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));
+    sec.classList.remove('hidden'); sec.style.display='block';
+    document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
+    render();
+  }
+  document.addEventListener('click',openPanel,true);
+  document.addEventListener('bdsm-invite-status-updated',render);
+  const install=()=>{const b=document.querySelector('#emailInvitesNav');if(b)b.dataset.view='email-invites';ensureSection();};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install);else install();
+})();
+
+</script>
+<!-- BDSM_RUNTIME_INLINE_END -->
+<!-- BDSM_SAFETY_TOPBAR_START -->
+<style>
+.sidebar .safety{display:none!important}
+#safetyTopBtn{border:1px solid #313b4f;background:#0e1420;color:#fff;border-radius:12px;padding:9px 12px;cursor:pointer;font-weight:700;margin-right:10px}
+#safetyPopover{position:fixed;top:78px;right:24px;width:min(380px,calc(100vw - 32px));z-index:9999;background:#111724;border:1px solid #394258;border-radius:14px;padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:none}
+#safetyPopover.open{display:block}
+#safetyPopover h3{margin:0 0 12px;color:#ff63bb;font-size:16px}
+#safetyPopover p{margin:8px 0;color:#d4d9e4;font-size:13px;line-height:1.45}
+#safetyPopover .panic{position:static;margin-top:14px;width:100%}
+@media(max-width:900px){#safetyPopover{top:66px;right:16px}#safetyTopBtn{padding:8px 10px;font-size:12px}}
+</style>
+<script>
+(()=>{
+  if(window.__bdsmSafetyTopbarInstalled)return;
+  window.__bdsmSafetyTopbarInstalled=true;
+  const install=()=>{
+    const old=document.querySelector('.sidebar .safety');
+    const top=document.querySelector('.topbar');
+    if(!old||!top||document.querySelector('#safetyTopBtn'))return;
+    const btn=document.createElement('button');
+    btn.id='safetyTopBtn';btn.type='button';btn.innerHTML='🛡️ Bezpieczeństwo';
+    const pop=document.createElement('div');
+    pop.id='safetyPopover';
+    pop.innerHTML='<h3>Bezpieczeństwo przede wszystkim</h3><p>✓ Zgoda i granice są podstawą.</p><p>✓ Każdy wpis można anulować.</p><p>✓ System nie zaostrza automatycznie konsekwencji.</p>';
+    const panic=old.querySelector('#panic');
+    if(panic)pop.appendChild(panic);
+    const chips=top.querySelector('.chips');
+    if(chips)chips.insertAdjacentElement('beforebegin',btn);else top.appendChild(btn);
+    document.body.appendChild(pop);
+    btn.addEventListener('click',e=>{e.stopPropagation();pop.classList.toggle('open')});
+    pop.addEventListener('click',e=>e.stopPropagation());
+    document.addEventListener('click',()=>pop.classList.remove('open'));
+    document.addEventListener('keydown',e=>{if(e.key==='Escape')pop.classList.remove('open')});
+  };
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
+<!-- BDSM_SAFETY_TOPBAR_END -->
 </body></html>
