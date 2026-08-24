@@ -14,6 +14,7 @@ patterns = [
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/education-tasks-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/education-library-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/written-notes-module\.js[^\"]*"[^>]*></script>',
+    r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/relationship-timeline-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/hourly-reports-module\.js[^\"]*"[^>]*></script>',
 ]
 for pattern in patterns:
@@ -37,6 +38,7 @@ deadlines = (root / 'deadlines-module.js').read_text(encoding='utf-8')
 education = (root / 'education-tasks-module.js').read_text(encoding='utf-8')
 education_library = (root / 'education-library-module.js').read_text(encoding='utf-8')
 written_notes = (root / 'written-notes-module.js').read_text(encoding='utf-8')
+timeline = (root / 'relationship-timeline-module.js').read_text(encoding='utf-8')
 hourly_reports = (root / 'hourly-reports-module.js').read_text(encoding='utf-8')
 
 safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
@@ -78,9 +80,10 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences, deadlines, education, education_library, written_notes, hourly_reports)
+modules = [sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, hourly_reports]
+runtime = '<!-- BDSM_RUNTIME_INLINE_START -->\n' + '\n'.join('<script>\n'+m+'\n</script>' for m in modules) + '\n<!-- BDSM_RUNTIME_INLINE_END -->'
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: runtime + offences + deadlines + education + written notes + hourly reports + safety')
+print('Optimized BDSM index: runtime + relationship timeline + full monthly PDF + safety')
