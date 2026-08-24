@@ -2,11 +2,27 @@ module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
   res.setHeader('Access-Control-Allow-Origin', 'https://cisowiankaa.github.io');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Cache-Control', 'no-store');
 
   if (req.method === 'OPTIONS') return res.status(204).end();
+
+  if (req.method === 'GET') {
+    const auth = process.env.AI_GATEWAY_API_KEY
+      ? 'gateway-key'
+      : process.env.VERCEL_OIDC_TOKEN
+        ? 'vercel-oidc'
+        : 'missing';
+    return res.status(auth === 'missing' ? 503 : 200).json({
+      ok: auth !== 'missing',
+      service: 'ai-influencer-image-generator',
+      model: 'openai/gpt-image-2',
+      auth
+    });
+  }
+
   if (req.method !== 'POST') {
-    res.setHeader('Allow', 'POST, OPTIONS');
+    res.setHeader('Allow', 'GET, POST, OPTIONS');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
