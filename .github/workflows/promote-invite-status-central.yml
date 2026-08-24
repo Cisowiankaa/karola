@@ -1,92 +1,31 @@
-name: Promote BDSM UI
+name: Optimize BDSM frontend
 on:
   push:
     branches:
       - main
     paths:
-      - .github/workflows/promote-invite-status-central.yml
+      - '.github/workflows/promote-invite-status-central.yml'
+      - 'bdsm-app/optimize-build.py'
+      - 'bdsm-app/sync-fix-v3.js'
+      - 'bdsm-app/invite-status-central.js'
+      - 'bdsm-app/email-panel-force-open.js'
 permissions:
   contents: write
 jobs:
-  promote:
+  optimize:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update BDSM UI
-        shell: bash
+      - name: Build stable BDSM frontend
+        run: python3 bdsm-app/optimize-build.py
+      - name: Commit optimized index
         run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          p = Path('bdsm-app/index.html')
-          text = p.read_text(encoding='utf-8')
-
-          text = re.sub(
-              r'\n?<script src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central\.js[^\"]*"></script>',
-              '',
-              text
-          )
-
-          start = '<!-- BDSM_SAFETY_TOPBAR_START -->'
-          end = '<!-- BDSM_SAFETY_TOPBAR_END -->'
-          block = """<!-- BDSM_SAFETY_TOPBAR_START -->
-<style>
-.sidebar .safety{display:none!important}
-#safetyTopBtn{border:1px solid #313b4f;background:#0e1420;color:#fff;border-radius:12px;padding:9px 12px;cursor:pointer;font-weight:700;margin-right:10px}
-#safetyPopover{position:fixed;top:78px;right:24px;width:min(380px,calc(100vw - 32px));z-index:9999;background:#111724;border:1px solid #394258;border-radius:14px;padding:16px;box-shadow:0 18px 50px rgba(0,0,0,.45);display:none}
-#safetyPopover.open{display:block}
-#safetyPopover h3{margin:0 0 12px;color:#ff63bb;font-size:16px}
-#safetyPopover p{margin:8px 0;color:#d4d9e4;font-size:13px;line-height:1.45}
-#safetyPopover .panic{position:static;margin-top:14px;width:100%}
-@media(max-width:900px){#safetyPopover{top:66px;right:16px}#safetyTopBtn{padding:8px 10px}}
-</style>
-<script>
-(function(){
-  if(window.__bdsmSafetyTopbarInstalled)return;
-  window.__bdsmSafetyTopbarInstalled=true;
-  function install(){
-    var old=document.querySelector('.sidebar .safety');
-    var top=document.querySelector('.topbar');
-    if(!old||!top||document.querySelector('#safetyTopBtn'))return;
-    var btn=document.createElement('button');
-    btn.id='safetyTopBtn';btn.type='button';btn.textContent='🛡️ Bezpieczeństwo';
-    var pop=document.createElement('div');
-    pop.id='safetyPopover';
-    pop.innerHTML='<h3>Bezpieczeństwo przede wszystkim</h3><p>✓ Zgoda i granice są podstawą.</p><p>✓ Każdy wpis można anulować.</p><p>✓ System nie zaostrza automatycznie konsekwencji.</p>';
-    var panic=old.querySelector('#panic');
-    if(panic)pop.appendChild(panic);
-    var chips=top.querySelector('.chips');
-    if(chips)top.insertBefore(btn,chips);else top.appendChild(btn);
-    document.body.appendChild(pop);
-    btn.addEventListener('click',function(e){e.stopPropagation();pop.classList.toggle('open')});
-    pop.addEventListener('click',function(e){e.stopPropagation()});
-    document.addEventListener('click',function(){pop.classList.remove('open')});
-    document.addEventListener('keydown',function(e){if(e.key==='Escape')pop.classList.remove('open')});
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
-})();
-</script>
-<!-- BDSM_SAFETY_TOPBAR_END -->"""
-
-          if start in text and end in text:
-              a = text.index(start)
-              b = text.index(end, a) + len(end)
-              text = text[:a] + block + text[b:]
-          else:
-              text = text.replace('</body>', block + '\n</body>')
-
-          p.write_text(text, encoding='utf-8')
-          PY
-      - name: Commit UI change
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "No changes"
+          if git diff --quiet -- bdsm-app/index.html; then
+            echo "No index changes"
             exit 0
           fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bdsm-app/index.html
-          git commit -m "Move BDSM safety panel to topbar"
+          git commit -m 'Optimize BDSM frontend runtime'
           git push
