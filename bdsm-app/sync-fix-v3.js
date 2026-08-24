@@ -37,7 +37,7 @@
     cloud.apiBase=API; cloud.enabled=true; writeJSON(key,cloud); return cloud;
   }
 
-  const fmtDate = value => value ? new Date(value).toLocaleString('pl-PL') : '—';
+  const fmtDate = value => { if(!value) return '—'; const d=new Date(value); return Number.isNaN(d.getTime())?'—':d.toLocaleString('pl-PL'); };
   function statusBadge(status) {
     const map={sent:['Wysłano','#12351f','#7ee2a8'],sending:['Wysyłanie…','#33270f','#ffd36f'],error:['Błąd','#3a171d','#ff929c'],pending:['Oczekuje','#202735','#c6cedb']};
     const [label,bg,fg]=map[status]||map.pending;
@@ -53,6 +53,7 @@
     try {
       await postSync({action:'sync',requestId,accountId:cloud.accountId,events:[],rules:{},accessList:[item],clientTime:new Date().toISOString()});
       updateInviteStatus(person,{status:'sent',sentAt:new Date().toISOString(),requestId,error:null});
+      document.dispatchEvent(new CustomEvent('bdsm-sync-complete'));
     } catch(error) {
       updateInviteStatus(person,{status:'error',lastAttemptAt:new Date().toISOString(),requestId,error:error.message||String(error)});
     }
@@ -94,7 +95,7 @@
     const rows=list.map(item=>{
       const st=log[item.person]||log[Object.keys(log).find(k=>k.toLowerCase()===String(item.person).toLowerCase())]||{status:'pending'};
       const when=st.sentAt||st.lastAttemptAt||null;
-      const messageId=st.messageId||'—';
+      const messageId=(st.messageId&&st.messageId!=='14.1')?st.messageId:'—';
       const canResend=!item.centralOnly&&!item.revoked;
       return `<tr><td>${item.person||'—'}</td><td>${item.role||'—'}</td><td>${statusBadge(st.status)}</td><td>${fmtDate(when)}</td><td style="font-family:monospace;font-size:11px">${messageId}</td><td>${st.source==='central'?'Baza centralna':'Lokalny'}</td><td>${st.error?`<span style="color:#ff929c">${st.error}</span>`:'—'}</td><td>${canResend?`<button class="btn" data-resend-invite="${encodeURIComponent(item.person||'')}">Wyślij ponownie</button>`:'—'}</td></tr>`;
     }).join('');
@@ -127,6 +128,7 @@
         pendingInvites.forEach(x=>updateInviteStatus(x.person,{status:'sent',sentAt,requestId,error:null}));
         if(txt) txt.textContent='Online — zapis potwierdzony • '+new Date().toLocaleTimeString('pl-PL');
         if(dot) dot.className='sync-dot ok';
+        document.dispatchEvent(new CustomEvent('bdsm-sync-complete'));
       } catch(error) {
         pendingInvites.forEach(x=>updateInviteStatus(x.person,{status:'error',lastAttemptAt:new Date().toISOString(),requestId,error:error.message||String(error)}));
         if(txt) txt.textContent='Błąd synchronizacji: '+(error.name==='AbortError'?'timeout':error.message);
