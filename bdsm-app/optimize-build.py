@@ -12,6 +12,8 @@ patterns = [
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/offences-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/deadlines-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/education-tasks-module\.js[^\"]*"[^>]*></script>',
+    r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/education-library-module\.js[^\"]*"[^>]*></script>',
+    r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/written-notes-module\.js[^\"]*"[^>]*></script>',
 ]
 for pattern in patterns:
     text = re.sub(pattern, '', text)
@@ -32,6 +34,8 @@ email_panel = (root / 'email-panel-force-open.js').read_text(encoding='utf-8')
 offences = (root / 'offences-module.js').read_text(encoding='utf-8')
 deadlines = (root / 'deadlines-module.js').read_text(encoding='utf-8')
 education = (root / 'education-tasks-module.js').read_text(encoding='utf-8')
+education_library = (root / 'education-library-module.js').read_text(encoding='utf-8')
+written_notes = (root / 'written-notes-module.js').read_text(encoding='utf-8')
 
 safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 <style>
@@ -72,9 +76,9 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences, deadlines, education)
+runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences, deadlines, education, education_library, written_notes)
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: inline runtime + offences + deadlines + education tasks + calendar + topbar safety')
+print('Optimized BDSM index: runtime + offences + deadlines + education library + written notes + safety')
