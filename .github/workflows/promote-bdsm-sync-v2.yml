@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Refresh BDSM script cache versions
+      - name: Pin BDSM frontend scripts to immutable commits
         run: |
           python - <<'PY'
           from pathlib import Path
@@ -22,9 +22,9 @@ jobs:
           p = Path('bdsm-app/index.html')
           text = p.read_text(encoding='utf-8')
           replacements = [
-            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2128'),
-            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central.js?v=20260824-2128'),
-            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/email-panel-force-open\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/email-panel-force-open.js?v=20260824-2128')
+            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/sync-fix-v3\.js(?:\?v=[^"\']+)?', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@99abda2b81207bb71978fcd41bb1552f6aec09b4/bdsm-app/sync-fix-v3.js'),
+            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/invite-status-central\.js(?:\?v=[^"\']+)?', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@5e1fd96c12974f658af55d76eff281c83ee37a5b/bdsm-app/invite-status-central.js'),
+            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/email-panel-force-open\.js(?:\?v=[^"\']+)?', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@8c42c24b48bd94426ebc9c9ea866ebf5a53d1c2f/bdsm-app/email-panel-force-open.js')
           ]
           counts=[]
           for pattern,new in replacements:
@@ -40,5 +40,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bdsm-app/index.html
-          git commit -m 'Refresh BDSM frontend script versions'
+          git commit -m 'Pin BDSM frontend scripts to commits'
           git push
