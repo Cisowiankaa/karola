@@ -23,7 +23,7 @@ jobs:
           text=p.read_text(encoding='utf-8')
           replacements=[
             (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/sync-fix-v3\.js(?:\?v=[^"\']+)?','https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@d03428e246ab75d6eefdc043295c9ae527aff5a4/bdsm-app/sync-fix-v3.js'),
-            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/invite-status-central\.js(?:\?v=[^"\']+)?','https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@5e1fd96c12974f658af55d76eff281c83ee37a5b/bdsm-app/invite-status-central.js'),
+            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/invite-status-central\.js(?:\?v=[^"\']+)?','https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@dc6fc18c3f6d4c4a37c6b7f2f7829943e428fa68/bdsm-app/invite-status-central.js'),
             (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/email-panel-force-open\.js(?:\?v=[^"\']+)?','https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@8c42c24b48bd94426ebc9c9ea866ebf5a53d1c2f/bdsm-app/email-panel-force-open.js')]
           for pattern,new in replacements:
             text=re.sub(pattern,new,text)
