@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/promote-bdsm-sync-v2.yml'
       - 'bdsm-app/sync-fix-v3.js'
+      - 'bdsm-app/invite-status-central.js'
 permissions:
   contents: write
 jobs:
@@ -12,22 +13,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Refresh BDSM sync v3 cache version
+      - name: Refresh BDSM script cache versions
         run: |
           python - <<'PY'
           from pathlib import Path
           p = Path('bdsm-app/index.html')
           text = p.read_text(encoding='utf-8')
-          old_versions = [
-              'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2020',
-              'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2042'
-          ]
-          new = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2058'
-          for old in old_versions:
-              if old in text:
-                  text = text.replace(old, new)
-          if new not in text:
-              raise SystemExit('Expected sync v3 reference not found')
+          import re
+          text, n1 = re.subn(r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2124', text)
+          text, n2 = re.subn(r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central.js?v=20260824-2124', text)
+          if not n1 or not n2:
+              raise SystemExit(f'Expected script references not found: sync={n1}, invite={n2}')
           p.write_text(text, encoding='utf-8')
           PY
       - name: Commit updated index
@@ -36,5 +32,5 @@ jobs:
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bdsm-app/index.html
-          git commit -m 'Refresh BDSM sync v3 cache version'
+          git commit -m 'Refresh BDSM frontend script versions'
           git push
