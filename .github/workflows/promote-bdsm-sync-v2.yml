@@ -6,6 +6,7 @@ on:
       - '.github/workflows/promote-bdsm-sync-v2.yml'
       - 'bdsm-app/sync-fix-v3.js'
       - 'bdsm-app/invite-status-central.js'
+      - 'bdsm-app/email-panel-force-open.js'
 permissions:
   contents: write
 jobs:
@@ -17,14 +18,21 @@ jobs:
         run: |
           python - <<'PY'
           from pathlib import Path
+          import re
           p = Path('bdsm-app/index.html')
           text = p.read_text(encoding='utf-8')
-          import re
-          text, n1 = re.subn(r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2124', text)
-          text, n2 = re.subn(r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central.js?v=20260824-2124', text)
-          if not n1 or not n2:
-              raise SystemExit(f'Expected script references not found: sync={n1}, invite={n2}')
-          p.write_text(text, encoding='utf-8')
+          replacements = [
+            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2128'),
+            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/invite-status-central.js?v=20260824-2128'),
+            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@main/bdsm-app/email-panel-force-open\.js\?v=[^"\']+', 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/email-panel-force-open.js?v=20260824-2128')
+          ]
+          counts=[]
+          for pattern,new in replacements:
+              text,n=re.subn(pattern,new,text)
+              counts.append(n)
+          if not all(counts):
+              raise SystemExit(f'Expected script references not found: {counts}')
+          p.write_text(text,encoding='utf-8')
           PY
       - name: Commit updated index
         run: |
