@@ -18,11 +18,15 @@ jobs:
           from pathlib import Path
           p = Path('bdsm-app/index.html')
           text = p.read_text(encoding='utf-8')
-          old = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2020'
-          new = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2042'
-          if old in text:
-              text = text.replace(old, new)
-          elif new not in text:
+          old_versions = [
+              'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2020',
+              'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2042'
+          ]
+          new = 'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@main/bdsm-app/sync-fix-v3.js?v=20260824-2058'
+          for old in old_versions:
+              if old in text:
+                  text = text.replace(old, new)
+          if new not in text:
               raise SystemExit('Expected sync v3 reference not found')
           p.write_text(text, encoding='utf-8')
           PY
