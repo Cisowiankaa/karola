@@ -1,4 +1,4 @@
-name: Promote BDSM Sync V4
+name: Promote BDSM Sync V5
 on:
   push:
     branches: [main]
@@ -14,35 +14,65 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Pin scripts and embed live email history
+      - name: Stabilize BDSM sync client
         run: |
           python - <<'PY'
           from pathlib import Path
           import re
           p=Path('bdsm-app/index.html')
           text=p.read_text(encoding='utf-8')
-          replacements=[
-            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/sync-fix-v3\.js(?:\?v=[^"\']+)?','https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@d03428e246ab75d6eefdc043295c9ae527aff5a4/bdsm-app/sync-fix-v3.js'),
-            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/invite-status-central\.js(?:\?v=[^"\']+)?','https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@dc6fc18c3f6d4c4a37c6b7f2f7829943e428fa68/bdsm-app/invite-status-central.js'),
-            (r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/email-panel-force-open\.js(?:\?v=[^"\']+)?','https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@8c42c24b48bd94426ebc9c9ea866ebf5a53d1c2f/bdsm-app/email-panel-force-open.js')]
-          for pattern,new in replacements:
-            text=re.sub(pattern,new,text)
-          start='<!-- BDSM_EMAIL_HISTORY_V4_START -->'; end='<!-- BDSM_EMAIL_HISTORY_V4_END -->'
-          block=r'''<!-- BDSM_EMAIL_HISTORY_V4_START -->
+
+          # Keep core panel scripts pinned; remove every old external history poller.
+          text=re.sub(r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/sync-fix-v3\.js(?:\?v=[^"\']+)?',
+                      'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@d03428e246ab75d6eefdc043295c9ae527aff5a4/bdsm-app/sync-fix-v3.js',text)
+          text=re.sub(r'https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^/]+/bdsm-app/email-panel-force-open\.js(?:\?v=[^"\']+)?',
+                      'https://cdn.jsdelivr.net/gh/Cisowiankaa/karola@8c42c24b48bd94426ebc9c9ea866ebf5a53d1c2f/bdsm-app/email-panel-force-open.js',text)
+          text=re.sub(r'\s*<script[^>]+src=["\'][^"\']*invite-status-central\.js[^"\']*["\'][^>]*></script>\s*','\n',text)
+
+          start='<!-- BDSM_EMAIL_HISTORY_V5_START -->'
+          end='<!-- BDSM_EMAIL_HISTORY_V5_END -->'
+          old_start='<!-- BDSM_EMAIL_HISTORY_V4_START -->'
+          old_end='<!-- BDSM_EMAIL_HISTORY_V4_END -->'
+          if old_start in text and old_end in text:
+              a=text.index(old_start); b=text.index(old_end,a)+len(old_end); text=text[:a]+text[b:]
+          if start in text and end in text:
+              a=text.index(start); b=text.index(end,a)+len(end); text=text[:a]+text[b:]
+
+          block=r'''<!-- BDSM_EMAIL_HISTORY_V5_START -->
 <script>
 (()=>{
+if(window.__BDSM_INVITE_HISTORY_V5__) return;
+window.__BDSM_INVITE_HISTORY_V5__=true;
 const API='https://hook.eu1.make.com/gw8nr0beqtbymtd2xgiga3wn7qfjhp25',LOG='bdsm-app-invite-log-v1';
-const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}},write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));let busy=false;
+const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}},write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+let busy=false,lastPull=0;
 const norm=x=>{for(let i=0;i<4;i++){if(typeof x==='string'){try{x=JSON.parse(x)}catch(_){break}}else if(x&&typeof x==='object'&&typeof x.body==='string'){try{x=JSON.parse(x.body)}catch(_){break}}else break}return x};
-async function pull(){if(busy)return;const accountId=read('bdsm-app-cloud-config',{}).accountId;if(!accountId)return;busy=true;try{const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'invite_history',accountId,clientTime:new Date().toISOString(),requestId:'HIST-'+Date.now()})});if(!r.ok)throw new Error('HTTP '+r.status);let raw;try{raw=await r.json()}catch(_){raw=await r.text()}const data=norm(raw),values=Array.isArray(data?.values)?data.values:Array.isArray(data)?data:[],log=read(LOG,{});for(const row of values){if(!Array.isArray(row)||row.length<4)continue;const key=String(row[0]||''),acc=String(row[3]||'');if(!key.startsWith('invite_sent:')||acc!==String(accountId))continue;const person=key.slice('invite_sent:'.length).trim();if(!person)continue;const dt=String(row[2]||'').trim(),d=new Date(dt);log[person]={...(log[person]||{}),status:'sent',messageId:String(row[1]||'').trim()||'—',sentAt:Number.isNaN(d.getTime())?null:dt,source:'central',error:null}}write(LOG,log);const t=document.querySelector('#syncText'),dot=document.querySelector('#syncDot');if(t)t.textContent='Online — połączono';if(dot)dot.className='sync-dot ok';document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'))}catch(e){console.warn('invite_history_v4',e)}finally{busy=false}}
-const opened=()=>{const s=document.querySelector('#view-email-invites');return s&&!s.classList.contains('hidden')&&s.style.display!=='none'};
-document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(pull,80)},true);document.addEventListener('bdsm-sync-complete',()=>setTimeout(pull,300));window.addEventListener('focus',()=>{if(opened())pull()});document.addEventListener('visibilitychange',()=>{if(!document.hidden&&opened())pull()});setInterval(()=>{if(opened())pull()},5000);setTimeout(pull,900);window.bdsmRefreshInviteHistory=pull;
+async function pull(force=false){
+  const now=Date.now(); if(busy||(!force&&now-lastPull<15000)) return;
+  const accountId=read('bdsm-app-cloud-config',{}).accountId;if(!accountId)return;
+  busy=true;lastPull=now;
+  try{
+    const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'invite_history',accountId,clientTime:new Date().toISOString(),requestId:'HIST-'+now})});
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    let raw;try{raw=await r.json()}catch(_){raw=await r.text()}
+    const data=norm(raw),values=Array.isArray(data?.values)?data.values:Array.isArray(data)?data:[],old=read(LOG,{}),log={...old};
+    for(const row of values){if(!Array.isArray(row)||row.length<4)continue;const key=String(row[0]||''),acc=String(row[3]||'');if(!key.startsWith('invite_sent:')||acc!==String(accountId))continue;const person=key.slice('invite_sent:'.length).trim();if(!person)continue;const dt=String(row[2]||'').trim(),d=new Date(dt);log[person]={...(log[person]||{}),status:'sent',messageId:String(row[1]||'').trim()||'—',sentAt:Number.isNaN(d.getTime())?null:dt,source:'central',error:null}}
+    if(JSON.stringify(old)!==JSON.stringify(log)){write(LOG,log);document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'))}
+    const t=document.querySelector('#syncText'),dot=document.querySelector('#syncDot');if(t)t.textContent='Online — połączono';if(dot)dot.className='sync-dot ok';
+  }catch(e){console.warn('invite_history_v5',e)}finally{busy=false}
+}
+const opened=()=>{const s=document.querySelector('#view-email-invites');return !!s&&!s.classList.contains('hidden')&&s.style.display!=='none'};
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#emailInvitesNav'))setTimeout(()=>pull(true),100)},true);
+document.addEventListener('bdsm-sync-complete',()=>setTimeout(()=>pull(true),400));
+window.addEventListener('focus',()=>{if(opened())pull(true)});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&opened())pull(true)});
+setInterval(()=>{if(opened())pull(false)},30000);
+setTimeout(()=>pull(false),1200);
+window.bdsmRefreshInviteHistory=()=>pull(true);
 })();
 </script>
-<!-- BDSM_EMAIL_HISTORY_V4_END -->'''
-          if start in text and end in text:
-            a=text.index(start);b=text.index(end,a)+len(end);text=text[:a]+block+text[b:]
-          else:text=text.replace('</body>',block+'\n</body>')
+<!-- BDSM_EMAIL_HISTORY_V5_END -->'''
+          text=text.replace('</body>',block+'\n</body>')
           p.write_text(text,encoding='utf-8')
           PY
       - name: Commit updated index
@@ -51,5 +81,5 @@ document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#em
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add bdsm-app/index.html
-          git commit -m 'Promote BDSM email history v4'
+          git commit -m 'Stabilize BDSM sync client v5'
           git push
