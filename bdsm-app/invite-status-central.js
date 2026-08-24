@@ -7,6 +7,18 @@
   const cloud=()=>read('bdsm-app-cloud-config',{});
   let refreshing=false;
 
+  function setOnlineState(ok=true){
+    const txt=document.querySelector('#syncText');
+    const dot=document.querySelector('#syncDot');
+    if(ok){
+      if(txt) txt.textContent='Online — połączono';
+      if(dot) dot.className='sync-dot ok';
+    }else{
+      if(txt) txt.textContent='Tryb lokalny — brak połączenia';
+      if(dot) dot.className='sync-dot';
+    }
+  }
+
   async function pullOne(person){
     const accountId=cloud().accountId;
     if(!accountId||!person)return null;
@@ -16,6 +28,7 @@
       body:JSON.stringify({action:'invite_status',person,accountId,clientTime:new Date().toISOString()})
     });
     if(!r.ok)throw new Error('HTTP '+r.status);
+    setOnlineState(true);
     const data=await r.json();
     if(data&&data.status==='sent'&&data.messageId){
       const log=read(logKey,{});
@@ -33,7 +46,9 @@
       let list=read('bdsm-app-access',[]).filter(x=>x&&x.person&&!x.revoked);
       if(!list.length) list=[{person:FALLBACK_PERSON,role:'user'}];
       const unique=[...new Map(list.map(x=>[String(x.person).toLowerCase(),x])).values()];
-      await Promise.allSettled(unique.map(x=>pullOne(x.person)));
+      const results=await Promise.allSettled(unique.map(x=>pullOne(x.person)));
+      const anySuccess=results.some(r=>r.status==='fulfilled');
+      setOnlineState(anySuccess);
       document.dispatchEvent(new CustomEvent('bdsm-invite-status-updated'));
     } finally {
       refreshing=false;
