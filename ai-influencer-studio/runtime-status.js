@@ -1,0 +1,78 @@
+(() => {
+  const API = 'https://ai-influencer-studio-api.vercel.app';
+  const statusEl = () => document.getElementById('systemStatus');
+  const copilotStateEl = () => document.querySelector('.copilot-card span');
+
+  function setStatus(mode, title) {
+    const el = statusEl();
+    if (!el) return;
+    el.dataset.detectedMode = mode;
+    el.title = title || '';
+    if (mode === 'online-ai') {
+      el.textContent = '● ONLINE + AI';
+      el.classList.add('online');
+      el.classList.remove('offline');
+    } else if (mode === 'online-local') {
+      el.textContent = '● ONLINE bez AI';
+      el.classList.add('online');
+      el.classList.remove('offline');
+    } else {
+      el.textContent = '● OFFLINE';
+      el.classList.remove('online');
+      el.classList.add('offline');
+    }
+  }
+
+  async function ping(path) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 7000);
+    try {
+      const r = await fetch(`${API}${path}?_=${Date.now()}`, { cache: 'no-store', signal: ctrl.signal });
+      const data = await r.json().catch(() => ({}));
+      return { ok: r.ok && data?.ok !== false, status: r.status, data };
+    } catch (error) {
+      return { ok: false, status: 0, data: {}, error };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function detectRuntime() {
+    if (!navigator.onLine) {
+      setStatus('offline', 'Brak połączenia z internetem. Dane lokalne pozostają dostępne.');
+      const c = copilotStateEl();
+      if (c) c.textContent = 'Tryb lokalny';
+      return;
+    }
+
+    const [social, ai] = await Promise.all([
+      ping('/api/social-sync'),
+      ping('/api/generate-image')
+    ]);
+
+    if (ai.ok) {
+      setStatus('online-ai', `Internet: OK · Instagram: ${social.ok ? 'OK' : 'błąd'} · AI: aktywne`);
+      const c = copilotStateEl();
+      if (c) c.textContent = 'AI aktywne';
+    } else {
+      setStatus('online-local', `Internet: OK · Instagram: ${social.ok ? 'OK' : 'błąd'} · AI: niedostępne (${ai.status || 'brak połączenia'})`);
+      const c = copilotStateEl();
+      if (c) c.textContent = 'Tryb lokalny — AI niedostępne';
+    }
+
+    window.AII_RUNTIME_HEALTH = {
+      checkedAt: new Date().toISOString(),
+      online: true,
+      social,
+      ai
+    };
+  }
+
+  window.AII_detectRuntime = detectRuntime;
+  window.addEventListener('online', detectRuntime);
+  window.addEventListener('offline', detectRuntime);
+  document.addEventListener('DOMContentLoaded', () => {
+    detectRuntime();
+    setInterval(detectRuntime, 60000);
+  });
+})();
