@@ -1,4 +1,4 @@
-// Deployment trigger: Meta social sync connected via GitHub/Vercel (root directory fixed)
+// Deployment trigger: Meta social sync connected via GitHub/Vercel (root directory fixed, token refresh)
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v26.0';
 const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
