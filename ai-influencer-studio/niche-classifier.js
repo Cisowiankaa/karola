@@ -79,7 +79,7 @@
     const initial=p.niche||'Beauty / lifestyle / UGC';
     q('#pageTitle').textContent='Klasyfikacja niszy';
     q('#pageSubtitle').textContent='Ocena rynku, konkurencji, monetyzacji i dopasowania platform.';
-    document.querySelectorAll('.nav-item').forEach(a=>a.classList.toggle('active',a.dataset.view==='niche'));
+    document.querySelectorAll('.nav-item').forEach(a=>a.classList.toggle('active',a.dataset.view==='niche-classifier'));
     content.innerHTML=`<section class="nc-shell"><section class="nc-hero"><div class="eyebrow">NICHE INTELLIGENCE</div><h2>Klasyfikacja niszy</h2><p>Sprawdź potencjał tematu, poziom konkurencji, skalowalność oraz dopasowanie platform. Tryb lokalny działa bez AI i bez płatnych tokenów.</p></section><section class="nc-card"><div class="nc-form"><label>Nisza<input id="ncNiche" value="${esc(initial)}"></label><label>Rynek<select id="ncMarket"><option>Polska</option><option>Europa</option><option>Globalny</option><option>Niemcy</option><option>UK / USA</option></select></label><label>&nbsp;<button class="nc-btn" id="ncRun">Sklasyfikuj niszę</button></label></div><div id="ncResult"></div></section></section>`;
     const saved=read(RESULT_KEY,null);
     const run=()=>{const r=analyze(q('#ncNiche').value.trim()||initial,q('#ncMarket').value,JSON.stringify(p));save(RESULT_KEY,r);renderResult(r);toast('Nisza sklasyfikowana')};
@@ -87,7 +87,7 @@
     if(saved&&saved.niche){q('#ncMarket').value=saved.market||'Polska';renderResult(saved)}else run();
   }
 
-  function bind(){const link=q('.nav-item[data-view="niche"]');if(link)link.onclick=e=>{e?.preventDefault?.();open()}}
+  function bind(){const link=q('.nav-item[data-view="niche-classifier"]');if(link)link.onclick=e=>{e?.preventDefault?.();open()}}
   document.addEventListener('DOMContentLoaded',bind);setTimeout(bind,0);
   window.AII_NicheClassifier={open,analyze};
 })();
