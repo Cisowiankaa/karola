@@ -21,6 +21,31 @@
     if (c) c.textContent = note;
   }
 
+  function setDiagnostic(state, detail = '') {
+    let el = document.getElementById('dashboardLiveDiagnostic');
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'dashboardLiveDiagnostic';
+      Object.assign(el.style, {
+        position: 'fixed', right: '18px', bottom: '18px', zIndex: '9999',
+        padding: '8px 11px', borderRadius: '10px', fontSize: '10px', fontWeight: '700',
+        boxShadow: '0 8px 24px rgba(0,0,0,.22)', backdropFilter: 'blur(8px)'
+      });
+      document.body.appendChild(el);
+    }
+    const map = {
+      loading: ['LIVE CHECK…', 'rgba(33,35,48,.92)', '#f4f4f6'],
+      ready: ['LIVE READY', 'rgba(18,104,72,.94)', '#fff'],
+      error: ['LIVE ERROR', 'rgba(150,43,43,.94)', '#fff']
+    };
+    const cfg = map[state] || map.loading;
+    el.textContent = detail ? `${cfg[0]} · ${detail}` : cfg[0];
+    el.style.background = cfg[1];
+    el.style.color = cfg[2];
+    el.title = detail || '';
+    el.style.display = document.querySelector('.nav-item.active')?.dataset.view === 'dashboard' ? 'block' : 'none';
+  }
+
   function esc(value) {
     return String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
   }
@@ -78,6 +103,7 @@
     }
     renderCalendar();
     document.documentElement.dataset.dashboardLive = 'ready';
+    setDiagnostic('ready', `${fmt(profile.followers)} followers`);
     return true;
   }
 
@@ -93,17 +119,24 @@
     }
     renderCalendar();
     document.documentElement.dataset.dashboardLive = 'error';
+    setDiagnostic('error', e?.message || 'sync failed');
     console.warn('Dashboard live sync:', e);
   }
 
   async function load(force = false) {
-    if (document.querySelector('.nav-item.active')?.dataset.view !== 'dashboard') return;
+    if (document.querySelector('.nav-item.active')?.dataset.view !== 'dashboard') {
+      setDiagnostic('loading');
+      const el = document.getElementById('dashboardLiveDiagnostic');
+      if (el) el.style.display = 'none';
+      return;
+    }
     if (loading) return;
     if (!force && cache?.ok) {
       apply();
       return;
     }
     loading = true;
+    setDiagnostic('loading');
     try {
       const r = await fetch(API, {headers:{'Accept':'application/json'}});
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -125,11 +158,15 @@
     }, 75);
   }
 
-  // Bind refresh directly to the app renderer so later renders cannot leave stale loading cards.
   const originalRender = window.render;
   if (typeof originalRender === 'function' && !originalRender.__aiiLiveWrapped) {
     const wrappedRender = function(...args) {
       const result = originalRender.apply(this, args);
+      setTimeout(() => {
+        const isDashboard = document.querySelector('.nav-item.active')?.dataset.view === 'dashboard';
+        const el = document.getElementById('dashboardLiveDiagnostic');
+        if (el) el.style.display = isDashboard ? 'block' : 'none';
+      }, 0);
       loadDashboardSoon(false);
       return result;
     };
@@ -145,7 +182,7 @@
     if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(true);
   }, REFRESH_MS);
 
-  // Startup retries cover slow/late DOM initialization without observing DOM mutations.
+  setDiagnostic('loading');
   [50, 250, 1000].forEach((delay, index) => setTimeout(() => {
     if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(index === 0);
   }, delay));
