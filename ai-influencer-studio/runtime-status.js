@@ -3,6 +3,11 @@
   const statusEl = () => document.getElementById('systemStatus');
   const copilotStateEl = () => document.querySelector('.copilot-card span');
 
+  function reportDashboard(phase, detail = '') {
+    const url = `/api/dashboard-debug?phase=${encodeURIComponent(phase)}&detail=${encodeURIComponent(detail)}`;
+    fetch(url, {cache:'no-store', keepalive:true}).catch(() => {});
+  }
+
   function setStatus(mode, title) {
     const el = statusEl();
     if (!el) return;
@@ -72,6 +77,13 @@
   window.addEventListener('online', detectRuntime);
   window.addEventListener('offline', detectRuntime);
   document.addEventListener('DOMContentLoaded', () => {
+    reportDashboard('runtime-loaded', typeof window.AII_refreshDashboard === 'function' ? 'refresh-hook-present' : 'refresh-hook-missing');
+    if (typeof window.AII_refreshDashboard === 'function') window.AII_refreshDashboard();
+    setTimeout(() => {
+      const state = document.documentElement.dataset.dashboardLive || 'missing';
+      const value = document.querySelector('#content .metrics-grid .metric-card .metric-value')?.textContent?.trim() || 'no-value';
+      reportDashboard(`dashboard-${state}`, value);
+    }, 2000);
     detectRuntime();
     setInterval(detectRuntime, 60000);
   });
