@@ -19,6 +19,7 @@ patterns = [
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/today-dashboard-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/weekly-plan-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/month-calendar-module\.js[^\"]*"[^>]*></script>',
+    r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/day-agenda-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/hourly-reports-module\.js[^\"]*"[^>]*></script>',
 ]
 for pattern in patterns:
@@ -47,6 +48,7 @@ case_controls = (root / 'case-controls-module.js').read_text(encoding='utf-8')
 today_dashboard = (root / 'today-dashboard-module.js').read_text(encoding='utf-8')
 weekly_plan = (root / 'weekly-plan-module.js').read_text(encoding='utf-8')
 month_calendar = (root / 'month-calendar-module.js').read_text(encoding='utf-8')
+day_agenda = (root / 'day-agenda-module.js').read_text(encoding='utf-8')
 hourly_reports = (root / 'hourly-reports-module.js').read_text(encoding='utf-8')
 
 safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
@@ -88,9 +90,9 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, case_controls, today_dashboard, weekly_plan, month_calendar, hourly_reports)
+runtime = '''<!-- BDSM_RUNTIME_INLINE_START -->\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<script>\n%s\n</script>\n<!-- BDSM_RUNTIME_INLINE_END -->''' % (sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, case_controls, today_dashboard, weekly_plan, month_calendar, day_agenda, hourly_reports)
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + hourly reports + safety')
+print('Optimized BDSM index: runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + day agenda + hourly reports + safety')
