@@ -1,11 +1,18 @@
 (() => {
-  const API = '/api/social-sync';
+  const METRICS_API = '/api/social-metrics';
+  const FULL_API = '/api/social-sync';
   const REFRESH_MS = 60000;
-  let cache = null;
-  let loading = false;
+  let metricsCache = null;
+  let fullCache = null;
+  let loadingMetrics = false;
+  let loadingFull = false;
 
   const fmt = n => (n === null || n === undefined || n === '') ? '—' : new Intl.NumberFormat('pl-PL').format(Number(n));
   const pct = n => Number.isFinite(Number(n)) ? `${Number(n).toFixed(2).replace('.', ',')}%` : '—';
+
+  function isDashboard() {
+    return document.querySelector('.nav-item.active')?.dataset.view === 'dashboard';
+  }
 
   function metricCards() {
     return [...document.querySelectorAll('#content .metrics-grid .metric-card')];
@@ -43,7 +50,7 @@
     el.style.background = cfg[1];
     el.style.color = cfg[2];
     el.title = detail || '';
-    el.style.display = document.querySelector('.nav-item.active')?.dataset.view === 'dashboard' ? 'block' : 'none';
+    el.style.display = isDashboard() ? 'block' : 'none';
   }
 
   function esc(value) {
@@ -77,10 +84,36 @@
     }).join('');
   }
 
-  function apply() {
-    if (!cache?.ok || !document.querySelector('#content .metrics-grid')) return false;
-    const profile = cache.profiles?.find(p => p.platform === 'Instagram') || cache.profiles?.[0] || {};
-    const items = Array.isArray(cache.items) ? cache.items : [];
+  function markReady(profile, syncedAt) {
+    const pulse = document.querySelector('#content .panel-card .tag');
+    if (pulse) pulse.textContent = 'LIVE · INSTAGRAM';
+    const subtitle = document.getElementById('pageSubtitle');
+    if (subtitle && isDashboard()) {
+      const synced = syncedAt ? new Date(syncedAt).toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'}) : 'teraz';
+      subtitle.textContent = `Dane na żywo z ${profile.handle || 'Instagrama'} · synchronizacja ${synced}`;
+    }
+    document.documentElement.dataset.dashboardLive = 'ready';
+    setDiagnostic('ready', `${fmt(profile.followers)} followers`);
+  }
+
+  function applyMetrics(data) {
+    if (!data?.ok || !data.profile || !document.querySelector('#content .metrics-grid')) return false;
+    const profile = data.profile;
+    const cards = metricCards();
+    setMetric(cards[0], 'Obserwujący', fmt(profile.followers), profile.handle ? `Instagram ${profile.handle}` : 'Dane LIVE');
+    setMetric(cards[1], 'Publikacje', fmt(profile.mediaCount), 'Łącznie na Instagramie');
+    setMetric(cards[2], 'Śr. zaangażowanie', '—', 'Dociąganie ostatnich publikacji…');
+    setMetric(cards[3], 'Polubienia', '—', 'Dociąganie ostatnich publikacji…');
+    setMetric(cards[4], 'Reels', '—', 'Dociąganie ostatnich publikacji…');
+    renderCalendar();
+    markReady(profile, data.syncedAt);
+    return true;
+  }
+
+  function applyFull(data) {
+    if (!data?.ok || !document.querySelector('#content .metrics-grid')) return false;
+    const profile = data.profiles?.find(p => p.platform === 'Instagram') || metricsCache?.profile || data.profiles?.[0] || {};
+    const items = Array.isArray(data.items) ? data.items.filter(x => String(x.platform || '').startsWith('Instagram')) : [];
     const likes = items.reduce((s, x) => s + Number(x.likes || 0), 0);
     const comments = items.reduce((s, x) => s + Number(x.comments || 0), 0);
     const interactions = likes + comments;
@@ -90,20 +123,12 @@
     const reels = items.filter(x => x.type === 'Reels').length;
     const cards = metricCards();
     setMetric(cards[0], 'Obserwujący', fmt(profile.followers), profile.handle ? `Instagram ${profile.handle}` : 'Dane LIVE');
-    setMetric(cards[1], 'Publikacje', fmt(profile.mediaCount), profile.mediaCount == null ? 'Brak zweryfikowanej wartości' : 'Łącznie na Instagramie');
+    setMetric(cards[1], 'Publikacje', fmt(profile.mediaCount), 'Łącznie na Instagramie');
     setMetric(cards[2], 'Śr. zaangażowanie', engagement == null ? '—' : pct(engagement), items.length ? `Na podstawie ${items.length} ostatnich publikacji` : 'Za mało danych');
     setMetric(cards[3], 'Polubienia', items.length ? fmt(likes) : '—', items.length ? `${fmt(comments)} komentarzy` : 'Brak pobranych publikacji');
     setMetric(cards[4], 'Reels', items.length ? fmt(reels) : '—', items.length ? `W ostatnich ${items.length} publikacjach` : 'Brak pobranych publikacji');
-    const pulse = document.querySelector('#content .panel-card .tag');
-    if (pulse) pulse.textContent = 'LIVE · INSTAGRAM';
-    const subtitle = document.getElementById('pageSubtitle');
-    if (subtitle && document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') {
-      const synced = cache.syncedAt ? new Date(cache.syncedAt).toLocaleTimeString('pl-PL', {hour:'2-digit', minute:'2-digit'}) : 'teraz';
-      subtitle.textContent = `Dane na żywo z ${profile.handle || 'Instagrama'} · synchronizacja ${synced}`;
-    }
     renderCalendar();
-    document.documentElement.dataset.dashboardLive = 'ready';
-    setDiagnostic('ready', `${fmt(profile.followers)} followers`);
+    markReady(profile, data.syncedAt);
     return true;
   }
 
@@ -114,48 +139,83 @@
     const pulse = document.querySelector('#content .panel-card .tag');
     if (pulse) pulse.textContent = 'OFFLINE · INSTAGRAM';
     const subtitle = document.getElementById('pageSubtitle');
-    if (subtitle && document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') {
-      subtitle.textContent = 'Instagram chwilowo niedostępny · wartości demo zostały ukryte';
-    }
+    if (subtitle && isDashboard()) subtitle.textContent = 'Instagram chwilowo niedostępny · wartości demo zostały ukryte';
     renderCalendar();
     document.documentElement.dataset.dashboardLive = 'error';
     setDiagnostic('error', e?.message || 'sync failed');
     console.warn('Dashboard live sync:', e);
   }
 
+  async function loadFull(force = false) {
+    if (!isDashboard() || loadingFull) return;
+    if (!force && fullCache?.ok) {
+      applyFull(fullCache);
+      return;
+    }
+    loadingFull = true;
+    try {
+      const r = await fetch(FULL_API, {headers:{'Accept':'application/json'}});
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      const data = await r.json();
+      if (!data?.ok) throw new Error(data?.error || 'Brak pełnych danych LIVE');
+      fullCache = data;
+      applyFull(fullCache);
+    } catch (e) {
+      // Basic metrics remain visible even if detailed post analytics fail.
+      console.warn('Dashboard detailed sync:', e);
+    } finally {
+      loadingFull = false;
+    }
+  }
+
   async function load(force = false) {
-    if (document.querySelector('.nav-item.active')?.dataset.view !== 'dashboard') {
-      setDiagnostic('loading');
+    if (!isDashboard()) {
       const el = document.getElementById('dashboardLiveDiagnostic');
       if (el) el.style.display = 'none';
       return;
     }
-    if (loading) return;
-    if (!force && cache?.ok) {
-      apply();
+    if (loadingMetrics) return;
+    if (!force && metricsCache?.ok) {
+      applyMetrics(metricsCache);
+      loadFull(false);
       return;
     }
-    loading = true;
+
+    loadingMetrics = true;
+    document.documentElement.dataset.dashboardLive = 'fetching';
     setDiagnostic('loading');
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), 8000);
     try {
-      const r = await fetch(API, {headers:{'Accept':'application/json'}});
+      const r = await fetch(METRICS_API, {headers:{'Accept':'application/json'}, signal: ctrl.signal});
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       if (!data?.ok) throw new Error(data?.error || 'Brak poprawnych danych LIVE');
-      cache = data;
-      apply();
+      metricsCache = data;
+      applyMetrics(metricsCache);
+      loadFull(force);
     } catch (e) {
-      cache = null;
-      applyError(e);
+      // Fallback to the legacy full endpoint if the lightweight endpoint is unavailable.
+      try {
+        const r = await fetch(FULL_API, {headers:{'Accept':'application/json'}});
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        const data = await r.json();
+        if (!data?.ok) throw new Error(data?.error || 'Brak poprawnych danych LIVE');
+        fullCache = data;
+        const profile = data.profiles?.find(p => p.platform === 'Instagram') || data.profiles?.[0];
+        if (profile) metricsCache = {ok:true, syncedAt:data.syncedAt, profile};
+        applyFull(data);
+      } catch (fallbackError) {
+        applyError(fallbackError);
+      }
     } finally {
-      loading = false;
+      clearTimeout(timer);
+      loadingMetrics = false;
     }
   }
 
   function loadDashboardSoon(force = true) {
-    setTimeout(() => {
-      if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(force);
-    }, 75);
+    setTimeout(() => { if (isDashboard()) load(force); }, 75);
   }
 
   const originalRender = window.render;
@@ -163,9 +223,8 @@
     const wrappedRender = function(...args) {
       const result = originalRender.apply(this, args);
       setTimeout(() => {
-        const isDashboard = document.querySelector('.nav-item.active')?.dataset.view === 'dashboard';
         const el = document.getElementById('dashboardLiveDiagnostic');
-        if (el) el.style.display = isDashboard ? 'block' : 'none';
+        if (el) el.style.display = isDashboard() ? 'block' : 'none';
       }, 0);
       loadDashboardSoon(false);
       return result;
@@ -178,12 +237,8 @@
   document.querySelectorAll('.nav-item[data-view="dashboard"]').forEach(el => el.addEventListener('click', () => loadDashboardSoon(true)));
   window.addEventListener('focus', () => loadDashboardSoon(false));
   window.addEventListener('storage', renderCalendar);
-  setInterval(() => {
-    if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(true);
-  }, REFRESH_MS);
+  setInterval(() => { if (isDashboard()) load(true); }, REFRESH_MS);
 
   setDiagnostic('loading');
-  [50, 250, 1000].forEach((delay, index) => setTimeout(() => {
-    if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(index === 0);
-  }, delay));
+  [50, 300, 1200].forEach((delay, index) => setTimeout(() => { if (isDashboard()) load(index === 0); }, delay));
 })();
