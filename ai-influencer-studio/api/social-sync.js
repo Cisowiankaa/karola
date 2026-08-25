@@ -8,7 +8,7 @@ function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://cisowiankaa.github.io');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 }
 
 function normalizeToken(value) {
