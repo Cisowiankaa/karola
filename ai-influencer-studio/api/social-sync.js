@@ -1,4 +1,5 @@
-const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v23.0';
+// Deployment trigger: Meta social sync connected via GitHub/Vercel
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v26.0';
 const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
 function cors(res) {
