@@ -1,6 +1,7 @@
 // Meta social sync via GitHub/Vercel
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v26.0';
-const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const FB_GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const IG_GRAPH = `https://graph.instagram.com/${GRAPH_VERSION}`;
 
 function cors(res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -33,9 +34,9 @@ function tokenDiagnostics(raw, normalized) {
   };
 }
 
-async function graph(path, token) {
+async function graph(base, path, token) {
   const sep = path.includes('?') ? '&' : '?';
-  const r = await fetch(`${GRAPH}/${path}${sep}access_token=${encodeURIComponent(token)}`);
+  const r = await fetch(`${base}/${path}${sep}access_token=${encodeURIComponent(token)}`);
   const data = await r.json().catch(() => ({}));
   if (!r.ok) {
     const err = new Error(data?.error?.message || `Meta Graph HTTP ${r.status}`);
@@ -83,20 +84,20 @@ module.exports = async function handler(req, res) {
     const metrics = {};
 
     if (igUserId) {
-      const ig = await graph(`${igUserId}?fields=id,username,name,profile_picture_url,followers_count,media_count`, token);
+      const ig = await graph(IG_GRAPH, `${igUserId}?fields=id,user_id,username,name,profile_picture_url,followers_count,media_count`, token);
       profiles.push({
         platform: 'Instagram',
         handle: ig.username ? `@${ig.username}` : '',
         active: true,
         connected: true,
-        externalId: ig.id,
+        externalId: ig.id || ig.user_id,
         followers: ig.followers_count || 0,
         mediaCount: ig.media_count || 0,
         avatar: ig.profile_picture_url || ''
       });
       metrics.instagram = { followers: ig.followers_count || 0, mediaCount: ig.media_count || 0 };
 
-      const media = await graph(`${igUserId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count&limit=25`, token);
+      const media = await graph(IG_GRAPH, `${igUserId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count&limit=25`, token);
       for (const m of media.data || []) {
         const dt = m.timestamp ? new Date(m.timestamp) : new Date();
         items.push({
@@ -118,7 +119,7 @@ module.exports = async function handler(req, res) {
     }
 
     if (pageId) {
-      const page = await graph(`${pageId}?fields=id,name,username,picture{url},followers_count,fan_count`, token);
+      const page = await graph(FB_GRAPH, `${pageId}?fields=id,name,username,picture{url},followers_count,fan_count`, token);
       profiles.push({
         platform: 'Facebook',
         handle: page.username ? `@${page.username}` : (page.name || ''),
@@ -130,7 +131,7 @@ module.exports = async function handler(req, res) {
       });
       metrics.facebook = { followers: page.followers_count || page.fan_count || 0 };
 
-      const posts = await graph(`${pageId}/posts?fields=id,message,created_time,permalink_url,shares,likes.summary(true),comments.summary(true)&limit=25`, token);
+      const posts = await graph(FB_GRAPH, `${pageId}/posts?fields=id,message,created_time,permalink_url,shares,likes.summary(true),comments.summary(true)&limit=25`, token);
       for (const p of posts.data || []) {
         const dt = p.created_time ? new Date(p.created_time) : new Date();
         items.push({
