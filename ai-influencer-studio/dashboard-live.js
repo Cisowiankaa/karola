@@ -53,7 +53,7 @@
   }
 
   function apply() {
-    if (!cache?.ok || !document.querySelector('#content .metrics-grid')) return;
+    if (!cache?.ok || !document.querySelector('#content .metrics-grid')) return false;
     const profile = cache.profiles?.find(p => p.platform === 'Instagram') || cache.profiles?.[0] || {};
     const items = Array.isArray(cache.items) ? cache.items : [];
     const likes = items.reduce((s, x) => s + Number(x.likes || 0), 0);
@@ -77,6 +77,8 @@
       subtitle.textContent = `Dane na żywo z ${profile.handle || 'Instagrama'} · synchronizacja ${synced}`;
     }
     renderCalendar();
+    document.documentElement.dataset.dashboardLive = 'ready';
+    return true;
   }
 
   function applyError(e) {
@@ -90,10 +92,12 @@
       subtitle.textContent = 'Instagram chwilowo niedostępny · wartości demo zostały ukryte';
     }
     renderCalendar();
+    document.documentElement.dataset.dashboardLive = 'error';
     console.warn('Dashboard live sync:', e);
   }
 
   async function load(force = false) {
+    if (document.querySelector('.nav-item.active')?.dataset.view !== 'dashboard') return;
     if (loading) return;
     if (!force && cache?.ok) {
       apply();
@@ -115,18 +119,34 @@
     }
   }
 
-  function loadDashboardSoon() {
+  function loadDashboardSoon(force = true) {
     setTimeout(() => {
-      if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(true);
-    }, 50);
+      if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(force);
+    }, 75);
   }
 
-  document.querySelectorAll('.nav-item[data-view="dashboard"]').forEach(el => el.addEventListener('click', loadDashboardSoon));
-  window.addEventListener('focus', loadDashboardSoon);
+  // Bind refresh directly to the app renderer so later renders cannot leave stale loading cards.
+  const originalRender = window.render;
+  if (typeof originalRender === 'function' && !originalRender.__aiiLiveWrapped) {
+    const wrappedRender = function(...args) {
+      const result = originalRender.apply(this, args);
+      loadDashboardSoon(false);
+      return result;
+    };
+    wrappedRender.__aiiLiveWrapped = true;
+    window.render = wrappedRender;
+  }
+
+  window.AII_refreshDashboard = () => load(true);
+  document.querySelectorAll('.nav-item[data-view="dashboard"]').forEach(el => el.addEventListener('click', () => loadDashboardSoon(true)));
+  window.addEventListener('focus', () => loadDashboardSoon(false));
   window.addEventListener('storage', renderCalendar);
   setInterval(() => {
     if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(true);
   }, REFRESH_MS);
 
-  loadDashboardSoon();
+  // Startup retries cover slow/late DOM initialization without observing DOM mutations.
+  [50, 250, 1000].forEach((delay, index) => setTimeout(() => {
+    if (document.querySelector('.nav-item.active')?.dataset.view === 'dashboard') load(index === 0);
+  }, delay));
 })();
