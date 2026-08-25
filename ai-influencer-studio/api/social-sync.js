@@ -1,4 +1,4 @@
-// Deployment trigger: Meta social sync connected via GitHub/Vercel (root directory fixed, token refresh)
+// Meta social sync via GitHub/Vercel
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v26.0';
 const GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
 
@@ -10,11 +10,39 @@ function cors(res) {
   res.setHeader('Cache-Control', 'no-store');
 }
 
+function normalizeToken(value) {
+  let token = String(value || '').trim();
+  token = token.replace(/^Bearer\s+/i, '').trim();
+  if ((token.startsWith('"') && token.endsWith('"')) || (token.startsWith("'") && token.endsWith("'"))) {
+    token = token.slice(1, -1).trim();
+  }
+  return token;
+}
+
+function tokenDiagnostics(raw, normalized) {
+  const original = String(raw || '');
+  return {
+    present: Boolean(original),
+    rawLength: original.length,
+    normalizedLength: normalized.length,
+    prefix: normalized.slice(0, 4),
+    startsWithInstagramPrefix: normalized.startsWith('IG'),
+    hadOuterWhitespace: original !== original.trim(),
+    hadBearerPrefix: /^\s*Bearer\s+/i.test(original),
+    hadWrappingQuotes: /^\s*["'].*["']\s*$/.test(original)
+  };
+}
+
 async function graph(path, token) {
   const sep = path.includes('?') ? '&' : '?';
   const r = await fetch(`${GRAPH}/${path}${sep}access_token=${encodeURIComponent(token)}`);
   const data = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(data?.error?.message || `Meta Graph HTTP ${r.status}`);
+  if (!r.ok) {
+    const err = new Error(data?.error?.message || `Meta Graph HTTP ${r.status}`);
+    err.metaCode = data?.error?.code;
+    err.metaType = data?.error?.type;
+    throw err;
+  }
   return data;
 }
 
@@ -29,9 +57,10 @@ module.exports = async function handler(req, res) {
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
-  const token = process.env.META_ACCESS_TOKEN;
-  const igUserId = process.env.META_IG_USER_ID;
-  const pageId = process.env.META_PAGE_ID;
+  const rawToken = process.env.META_ACCESS_TOKEN;
+  const token = normalizeToken(rawToken);
+  const igUserId = String(process.env.META_IG_USER_ID || '').trim();
+  const pageId = String(process.env.META_PAGE_ID || '').trim();
 
   if (!token || (!igUserId && !pageId)) {
     return res.status(503).json({
@@ -43,6 +72,7 @@ module.exports = async function handler(req, res) {
         !igUserId ? 'META_IG_USER_ID' : null,
         !pageId ? 'META_PAGE_ID' : null
       ].filter(Boolean),
+      tokenDiagnostics: tokenDiagnostics(rawToken, token),
       message: 'Meta API credentials are not configured on the server.'
     });
   }
@@ -134,6 +164,12 @@ module.exports = async function handler(req, res) {
       metrics
     });
   } catch (error) {
-    return res.status(502).json({ ok: false, error: error?.message || 'Meta synchronization failed' });
+    return res.status(502).json({
+      ok: false,
+      error: error?.message || 'Meta synchronization failed',
+      metaCode: error?.metaCode || null,
+      metaType: error?.metaType || null,
+      tokenDiagnostics: tokenDiagnostics(rawToken, token)
+    });
   }
 };
