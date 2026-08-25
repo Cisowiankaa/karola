@@ -1,5 +1,5 @@
 (() => {
-  const API = 'https://ai-influencer-studio-api.vercel.app/api/social-sync';
+  const API = '/api/social-sync';
   const REFRESH_MS = 60000;
   let cache = null;
   let loading = false;
