@@ -5,7 +5,8 @@ const IG_GRAPH = `https://graph.instagram.com/${GRAPH_VERSION}`;
 
 function cors(res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Access-Control-Allow-Origin', 'https://cisowiankaa.github.io');
+  // Public read-only endpoint: allow the production domain, GitHub Pages and immutable Vercel deployment URLs.
+  res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   // Browser should revalidate, while Vercel CDN can safely serve the same Meta snapshot
