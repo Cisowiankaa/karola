@@ -1,19 +1,30 @@
 (() => {
   const API = 'https://ai-influencer-studio-api.vercel.app/api/social-sync';
+  const REFRESH_MS = 60000;
   let cache = null;
   let loading = false;
+  let lastLoadAt = 0;
+  let observerBusy = false;
 
   const fmt = n => (n === null || n === undefined || n === '') ? '—' : new Intl.NumberFormat('pl-PL').format(Number(n));
   const pct = n => Number.isFinite(Number(n)) ? `${Number(n).toFixed(2).replace('.', ',')}%` : '—';
 
-  async function load() {
+  async function load(force = false) {
+    const now = Date.now();
     if (loading) return;
+    if (!force && lastLoadAt && now - lastLoadAt < REFRESH_MS) {
+      if (cache?.ok) apply();
+      return;
+    }
+
     loading = true;
+    lastLoadAt = now;
     try {
       const r = await fetch(API, { cache: 'no-store' });
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      cache = await r.json();
-      if (!cache?.ok) throw new Error(cache?.error || 'Brak poprawnych danych LIVE');
+      const data = await r.json();
+      if (!data?.ok) throw new Error(data?.error || 'Brak poprawnych danych LIVE');
+      cache = data;
       apply();
     } catch (e) {
       cache = null;
@@ -139,15 +150,26 @@
   }
 
   const observer = new MutationObserver(() => {
-    if (document.querySelector('#content .metrics-grid')) {
-      renderCalendar();
-      if (cache?.ok) apply(); else load();
-    }
+    if (observerBusy) return;
+    if (!document.querySelector('#content .metrics-grid')) return;
+
+    observerBusy = true;
+    queueMicrotask(() => {
+      try {
+        renderCalendar();
+        if (cache?.ok) apply();
+        else if (Date.now() - lastLoadAt >= REFRESH_MS) load();
+      } finally {
+        observerBusy = false;
+      }
+    });
   });
 
-  observer.observe(document.getElementById('content'), { childList: true, subtree: true });
-  window.addEventListener('focus', load);
+  const content = document.getElementById('content');
+  if (content) observer.observe(content, { childList: true, subtree: true });
+
+  window.addEventListener('focus', () => load());
   window.addEventListener('storage', renderCalendar);
-  setInterval(load, 60000);
-  load();
+  setInterval(() => load(), REFRESH_MS);
+  load(true);
 })();
