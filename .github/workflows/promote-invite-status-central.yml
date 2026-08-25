@@ -19,6 +19,7 @@ on:
       - 'bdsm-app/today-dashboard-module.js'
       - 'bdsm-app/weekly-plan-module.js'
       - 'bdsm-app/month-calendar-module.js'
+      - 'bdsm-app/day-agenda-module.js'
       - 'bdsm-app/hourly-reports-module.js'
 permissions:
   contents: write
