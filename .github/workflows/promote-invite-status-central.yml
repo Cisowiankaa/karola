@@ -15,6 +15,7 @@ on:
       - 'bdsm-app/education-library-module.js'
       - 'bdsm-app/written-notes-module.js'
       - 'bdsm-app/relationship-timeline-module.js'
+      - 'bdsm-app/case-controls-module.js'
       - 'bdsm-app/hourly-reports-module.js'
 permissions:
   contents: write
