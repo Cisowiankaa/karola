@@ -8,7 +8,10 @@ function cors(res) {
   res.setHeader('Access-Control-Allow-Origin', 'https://cisowiankaa.github.io');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  // Browser should revalidate, while Vercel CDN can safely serve the same Meta snapshot
+  // for 60 seconds and refresh it in the background for up to 5 minutes.
+  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
+  res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 }
 
 function normalizeToken(value) {
