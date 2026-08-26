@@ -1,7 +1,6 @@
 const GRAPH_VERSION=process.env.META_GRAPH_VERSION||'v26.0';
 const IG_GRAPH=`https://graph.instagram.com/${GRAPH_VERSION}`;
 const FB_GRAPH=`https://graph.facebook.com/${GRAPH_VERSION}`;
-const DEFAULT_META_PAGE_ID='273350126110966';
 
 const has=v=>Boolean(String(v||'').trim());
 const clean=v=>String(v||'').trim().replace(/^Bearer\s+/i,'').replace(/^['"]|['"]$/g,'').trim();
@@ -22,7 +21,7 @@ async function probeInstagram(){
 
 async function probeFacebook(){
   const token=clean(process.env.META_FB_ACCESS_TOKEN||process.env.META_ACCESS_TOKEN);
-  const pageId=String(process.env.META_PAGE_ID||DEFAULT_META_PAGE_ID).trim();
+  const pageId=String(process.env.META_PAGE_ID||'').trim();
   if(!token||!pageId)return {healthy:false,checked:false,code:!pageId?'PAGE_ID_MISSING':'TOKEN_MISSING'};
   try{
     const r=await fetch(`${FB_GRAPH}/${encodeURIComponent(pageId)}?fields=id,name&access_token=${encodeURIComponent(token)}`);
@@ -41,7 +40,7 @@ module.exports=async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   if(req.method!=='GET')return res.status(405).json({ok:false,error:'Method not allowed'});
 
-  const pageId=String(process.env.META_PAGE_ID||DEFAULT_META_PAGE_ID).trim();
+  const pageId=String(process.env.META_PAGE_ID||'').trim();
   const instagramMetaConfigured=(has(process.env.META_INSTAGRAM_APP_ID)&&has(process.env.META_INSTAGRAM_APP_SECRET))||(has(process.env.META_IG_USER_ID)&&(has(process.env.META_IG_ACCESS_TOKEN)||has(process.env.META_ACCESS_TOKEN)));
   const facebookMetaConfigured=(has(process.env.META_FACEBOOK_APP_ID)&&has(process.env.META_FACEBOOK_APP_SECRET))||(has(pageId)&&(has(process.env.META_FB_ACCESS_TOKEN)||has(process.env.META_ACCESS_TOKEN)));
   const apify=has(process.env.APIFY_TOKEN);
@@ -70,7 +69,7 @@ module.exports=async function handler(req,res){
         metaHealthMessage:fbHealth.message||null,
         metaOAuthReady:has(process.env.META_FACEBOOK_APP_ID)&&has(process.env.META_FACEBOOK_APP_SECRET),
         pageIdConfigured:Boolean(pageId),
-        pageIdSource:process.env.META_PAGE_ID?'META_PAGE_ID':'DEFAULT_META_PAGE_ID',
+        pageIdSource:pageId?'META_PAGE_ID':null,
         activeSource:fbHealth.healthy?'meta':'local-cache',
         fallback:'local-cache'
       },
@@ -85,7 +84,7 @@ module.exports=async function handler(req,res){
     },
     missing:{
       instagram:[!has(process.env.META_INSTAGRAM_APP_ID)?'META_INSTAGRAM_APP_ID':null,!has(process.env.META_INSTAGRAM_APP_SECRET)?'META_INSTAGRAM_APP_SECRET':null,!apify?'APIFY_TOKEN':null].filter(Boolean),
-      facebook:[!has(process.env.META_FACEBOOK_APP_ID)?'META_FACEBOOK_APP_ID':null,!has(process.env.META_FACEBOOK_APP_SECRET)?'META_FACEBOOK_APP_SECRET':null].filter(Boolean),
+      facebook:[!has(process.env.META_FACEBOOK_APP_ID)?'META_FACEBOOK_APP_ID':null,!has(process.env.META_FACEBOOK_APP_SECRET)?'META_FACEBOOK_APP_SECRET':null,!pageId?'META_PAGE_ID':null].filter(Boolean),
       tiktok:[!tiktok?'TIKTOK_ACCESS_TOKEN / TIKTOK_CLIENT_KEY':null,!apify?'APIFY_TOKEN (fallback)':null].filter(Boolean)
     }
   });
