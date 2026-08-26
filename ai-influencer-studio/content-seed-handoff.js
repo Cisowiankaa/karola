@@ -5,6 +5,8 @@
   const IMAGE_CONSUMED_KEY='aii-image-content-seed-consumed';
   const PLAN_KEY='aii-niche-content-plan';
   const MONTH_KEY='aii-niche-month-plan';
+  const RECOMMENDATIONS_KEY='aii-social-local-recommendations';
+  const SOCIAL_QUEUE_KEY='aii-social-queue';
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const toast=t=>window.showToast?window.showToast(t):alert(t);
@@ -45,7 +47,7 @@
     const tone=document.getElementById('ppTone');if(tone&&[...tone.options].some(o=>o.value==='Ekspercki'))tone.value='Ekspercki';
     const goal=document.getElementById('ppGoal');if(goal&&[...goal.options].some(o=>o.value==='Informacyjny'))goal.value='Informacyjny';
     document.getElementById('ppGenerate')?.click();
-    toast('Pomysł z Generatora nisz został wypełniony w poście');
+    toast(seed.source==='performance-radar'?'Rekomendacja Performance Radar została wypełniona w poście':'Pomysł z Generatora nisz został wypełniony w poście');
     return true;
   }
 
@@ -59,7 +61,7 @@
     const goal=document.getElementById('rpGoal');if(goal&&[...goal.options].some(o=>o.value==='Zaangażowanie'))goal.value='Zaangażowanie';
     const style=document.getElementById('rpStyle');if(style&&[...style.options].some(o=>o.value==='UGC natural'))style.value='UGC natural';
     document.getElementById('rpBuild')?.click();
-    toast('Pomysł z Generatora nisz został wypełniony w Reels');
+    toast(seed.source==='performance-radar'?'Rekomendacja Performance Radar została wypełniona w Reels':'Pomysł z Generatora nisz został wypełniony w Reels');
     return true;
   }
 
@@ -131,6 +133,77 @@
     });
   }
 
+  function nextDate(){
+    const d=new Date();d.setDate(d.getDate()+1);
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  }
+
+  function recommendationParts(r){
+    const formatText=String(r?.format?.title||'Post');
+    const isReels=/reels|shorts|story/i.test(formatText);
+    const format=isReels?'Reels':(/carousel/i.test(formatText)?'Carousel':'Post');
+    const topicText=String(r?.topic?.title||'').replace(/^Rozwijaj temat:\s*/i,'').trim();
+    const topic=/^(brak|zbierz)/i.test(topicText)||!topicText?'sprawdzony temat':topicText;
+    const hourMatch=String(r?.hour?.title||'').match(/([01]?\d|2[0-3]):00/);
+    const hour=hourMatch?`${String(hourMatch[1]).padStart(2,'0')}:00`:'18:00';
+    const cta=String(r?.cta?.title||'').trim();
+    return {format,isReels,topic,hour,cta};
+  }
+
+  function addRecommendationToCalendar(seed,parts,r){
+    const arr=read(SOCIAL_QUEUE_KEY,[]);
+    const createdAt=Date.now();
+    arr.unshift({
+      id:createdAt,
+      sourceId:`performance-radar-${createdAt}`,
+      title:`Test Performance Radar — ${parts.topic}`,
+      platform:'Instagram',
+      type:parts.format,
+      date:nextDate(),
+      time:parts.hour,
+      status:'Zaplanowany',
+      notes:`Rekomendacja lokalna. ${r?.summary||''}${parts.cta?` CTA: ${parts.cta}.`:''}`,
+      source:'Performance Radar',
+      createdAt,
+      updatedAt:createdAt
+    });
+    save(SOCIAL_QUEUE_KEY,arr);
+    document.dispatchEvent(new CustomEvent('aii:social-changed',{detail:{count:arr.length,source:'performance-radar'}}));
+  }
+
+  function createFromRecommendation(){
+    const r=read(RECOMMENDATIONS_KEY,null);
+    if(!r){toast('Najpierw odśwież Performance Radar, aby utworzyć rekomendację');return false;}
+    const parts=recommendationParts(r);
+    const seed={
+      source:'performance-radar',
+      niche:'na podstawie danych Performance Radar',
+      title:parts.topic,
+      brief:`Format: ${parts.format}. Rekomendowana godzina: ${parts.hour}. ${r.summary||''}${parts.cta?` CTA: ${parts.cta}.`:''}`,
+      type:parts.format,
+      recommendedHour:parts.hour,
+      createdAt:Date.now()
+    };
+    save(SEED_KEY,seed);
+    localStorage.removeItem(CONSUMED_KEY);
+    addRecommendationToCalendar(seed,parts,r);
+    const nav=document.querySelector(`.nav-item[data-view="${parts.isReels?'reels':'posts'}"]`)||document.querySelector(`.nav-item[data-view="${parts.isReels?'reels-generator':'posts'}"]`);
+    if(nav)nav.click();
+    [40,140,350,700].forEach(ms=>setTimeout(tryConsume,ms));
+    toast(`Zaplanowano ${parts.format} na ${parts.hour} i otwarto generator`);
+    return true;
+  }
+
+  function enhanceRecommendationButton(){
+    const summary=document.querySelector('.social-local-summary');
+    if(!summary||document.getElementById('performanceCreateContent'))return;
+    const actions=document.createElement('div');
+    actions.style.cssText='display:flex;gap:8px;flex-wrap:wrap;margin-top:9px';
+    actions.innerHTML='<button type="button" class="primary" id="performanceCreateContent">＋ Utwórz treść z tej rekomendacji</button>';
+    summary.insertAdjacentElement('afterend',actions);
+    document.getElementById('performanceCreateContent')?.addEventListener('click',createFromRecommendation);
+  }
+
   function tryConsume(){
     const seed=read(SEED_KEY,null);if(!seed)return;
     const id=seedId(seed);if(read(CONSUMED_KEY,'')===id)return;
@@ -145,6 +218,7 @@
     tryConsume();
     tryConsumeImage();
     enhanceImageButtons();
+    enhanceRecommendationButton();
   }
 
   document.addEventListener('DOMContentLoaded',()=>{
@@ -153,5 +227,6 @@
     if(root)new MutationObserver(()=>setTimeout(refresh,20)).observe(root,{childList:true,subtree:true});
   });
   document.addEventListener('click',()=>setTimeout(refresh,40));
-  window.AIIContentSeedHandoff={tryConsume,tryConsumeImage,makePackage,openImage,fillImage};
+  document.addEventListener('aii:social-changed',()=>setTimeout(refresh,50));
+  window.AIIContentSeedHandoff={tryConsume,tryConsumeImage,makePackage,openImage,fillImage,createFromRecommendation};
 })();
