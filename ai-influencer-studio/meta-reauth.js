@@ -7,17 +7,17 @@
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const toast=t=>window.showToast?window.showToast(t):alert(t);
-  let authReady=null;
+  let authStatus=null;
 
   async function loadAuthStatus(){
     try{
       const r=await fetch(AUTH_STATUS,{headers:{Accept:'application/json'},credentials:'include',cache:'no-store'});
       const data=await r.json().catch(()=>({}));
-      authReady=Boolean(r.ok&&data.ready);
-      return data;
+      authStatus=r.ok?data:{ready:false};
+      return authStatus;
     }catch{
-      authReady=false;
-      return {ready:false};
+      authStatus={ready:false};
+      return authStatus;
     }
   }
 
@@ -37,39 +37,63 @@
     },120);
   }
 
-  async function connect(){
-    if(authReady!==true){
-      const status=await loadAuthStatus();
-      if(!status.ready){
-        toast('OAuth Meta nie jest jeszcze gotowy — brakuje META_APP_SECRET na Vercel');
-        return false;
-      }
+  function missingText(status){
+    const ig=(status?.instagram?.missing||[]).join(', ');
+    const fb=(status?.facebook?.missing||[]).join(', ');
+    if(ig&&fb)return `Instagram: ${ig}. Facebook: ${fb}.`;
+    return ig||fb||'Brak wymaganej konfiguracji OAuth Meta.';
+  }
+
+  async function connect(mode){
+    const status=authStatus||await loadAuthStatus();
+    const cfg=mode==='facebook'?status.facebook:status.instagram;
+    if(!cfg?.ready){
+      toast(`OAuth ${mode==='facebook'?'Facebook':'Instagram'} nie jest gotowy — ${missingText(status)}`);
+      return false;
     }
-    location.href=AUTH_START;
+    location.href=`${AUTH_START}?mode=${encodeURIComponent(mode)}`;
     return true;
   }
 
-  async function injectButton(){
+  async function injectButtons(){
     const panel=q('.social-sync-panel');
-    if(!panel||q('#metaReauthBtn'))return;
-    const b=document.createElement('button');
-    b.id='metaReauthBtn';
-    b.className='primary';
-    b.type='button';
-    b.textContent='Sprawdzam Meta…';
-    b.disabled=true;
-    b.title='Bezpieczne ponowne połączenie Instagram/Meta';
-    b.onclick=()=>connect();
-    panel.appendChild(b);
+    if(!panel||q('#metaReauthWrap'))return;
+
+    const wrap=document.createElement('div');
+    wrap.id='metaReauthWrap';
+    wrap.style.display='flex';
+    wrap.style.gap='8px';
+    wrap.style.flexWrap='wrap';
+    wrap.innerHTML='<button id="metaInstagramBtn" class="primary" type="button" disabled>Sprawdzam Meta…</button>';
+    panel.appendChild(wrap);
 
     const status=await loadAuthStatus();
-    b.disabled=false;
-    if(status.ready){
-      b.textContent='Połącz ponownie Meta';
-      b.title='OAuth Meta gotowy';
+    const ig=q('#metaInstagramBtn');
+    if(status?.instagram?.ready){
+      ig.disabled=false;
+      ig.textContent='Połącz Instagram';
+      ig.title='Instagram API with Instagram Login';
+      ig.onclick=()=>connect('instagram');
+    }else if(status?.facebook?.ready){
+      ig.disabled=false;
+      ig.textContent='Połącz Facebook + Instagram';
+      ig.title='Instagram API with Facebook Login';
+      ig.onclick=()=>connect('facebook');
     }else{
-      b.textContent='Meta: dokończ konfigurację';
-      b.title='Brakuje META_APP_SECRET na Vercel';
+      ig.disabled=false;
+      ig.textContent='Meta: dokończ konfigurację';
+      ig.title=missingText(status);
+      ig.onclick=()=>toast(`Brak konfiguracji OAuth. ${missingText(status)}`);
+    }
+
+    if(status?.instagram?.ready && status?.facebook?.ready){
+      const fb=document.createElement('button');
+      fb.className='ghost';
+      fb.type='button';
+      fb.textContent='Połącz przez Facebook';
+      fb.title='Facebook Login for Business';
+      fb.onclick=()=>connect('facebook');
+      wrap.appendChild(fb);
     }
   }
 
@@ -116,8 +140,8 @@
   document.addEventListener('DOMContentLoaded',()=>{
     acceptCallback();
     const root=q('#content');
-    if(root)new MutationObserver(()=>setTimeout(injectButton,0)).observe(root,{childList:true,subtree:true});
-    setTimeout(injectButton,200);
+    if(root)new MutationObserver(()=>setTimeout(injectButtons,0)).observe(root,{childList:true,subtree:true});
+    setTimeout(injectButtons,200);
   });
 
   window.AIIMetaReauth={sync:syncSession,connect,check:loadAuthStatus};
