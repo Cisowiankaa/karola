@@ -37,14 +37,12 @@
     if(c)c.textContent='Tryb lokalny — sprawdzanie AI';
   }
 
-  function loadCalendarHandoff(){
-    if(window.AIIContentCalendarHandoff||document.querySelector('script[data-aii-calendar-handoff]'))return;
-    const s=document.createElement('script');
-    s.src='content-calendar-handoff.js?v=20260827-2';
-    s.dataset.aiiCalendarHandoff='1';
-    s.defer=true;
-    document.head.appendChild(s);
+  function loadScriptOnce(src,flag){
+    if(document.querySelector(`script[data-${flag}]`))return;
+    const s=document.createElement('script');s.src=src;s.dataset[flag.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]='1';s.defer=true;document.head.appendChild(s);
   }
+  function loadCalendarHandoff(){if(!window.AIIContentCalendarHandoff)loadScriptOnce('content-calendar-handoff.js?v=20260827-2','aii-calendar-handoff')}
+  function loadOfflineRuntime(){if(!window.AIIOfflineRuntime)loadScriptOnce('offline-runtime.js?v=20260827-1','aii-offline-runtime')}
 
   async function ping(path) {
     const ctrl = new AbortController();
@@ -94,10 +92,13 @@
 
   setSafeInitialStatus();
   loadCalendarHandoff();
+  loadOfflineRuntime();
   window.AII_detectRuntime = detectRuntime;
   window.addEventListener('online', detectRuntime);
   window.addEventListener('offline', detectRuntime);
   document.addEventListener('DOMContentLoaded', () => {
+    loadCalendarHandoff();
+    loadOfflineRuntime();
     if (typeof window.AII_refreshDashboard === 'function') window.AII_refreshDashboard();
     detectRuntime();
     setInterval(detectRuntime, 60000);
