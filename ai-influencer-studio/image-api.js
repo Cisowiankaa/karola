@@ -9,14 +9,15 @@
   const toast=t=>window.showToast?window.showToast(t):alert(t);
 
   function providerConfig(){
-    const provider=(localStorage.getItem(PROVIDER_KEY)||'higgsfield').toLowerCase();
     const endpoint=localStorage.getItem(PROVIDER_ENDPOINT_KEY)||DEFAULT_API_URL;
+    let provider=(localStorage.getItem(PROVIDER_KEY)||'openai').toLowerCase();
+    if(endpoint===DEFAULT_API_URL) provider='openai';
     return {provider,endpoint};
   }
 
   function providerLabel(provider){
     if(provider==='higgsfield')return 'Higgsfield';
-    if(provider==='openai')return 'OpenAI';
+    if(provider==='openai')return 'OpenAI · GPT Image 2';
     return provider||'AI';
   }
 
@@ -70,7 +71,7 @@
     let box=document.getElementById('gPhotoProviderStatus');
     if(!box){box=document.createElement('div');box.id='gPhotoProviderStatus';box.style.cssText='margin:10px 0;padding:10px 12px;border:1px solid #dbe5ff;border-radius:11px;background:#f6f8ff;font-size:9px;font-weight:800;color:#4d5f8a';btn.parentElement?.insertBefore(box,btn);}
     const isCustom=endpoint!==DEFAULT_API_URL;
-    box.innerHTML=`MODEL OBRAZU: ${providerLabel(provider).toUpperCase()}<div style="font-weight:500;margin-top:4px;color:#7b8290">${isCustom?'Połączony z własnym endpointem generatora.':'Tryb przygotowany do bezpiecznego backendu; brak płatnego AI nie blokuje aplikacji.'}</div>`;
+    box.innerHTML=`MODEL OBRAZU: ${providerLabel(provider).toUpperCase()}<div style="font-weight:500;margin-top:4px;color:#7b8290">${isCustom?'Połączony z własnym endpointem generatora.':'Backend Vercel AI Gateway jest aktywny. Generowanie uruchamia się dopiero po kliknięciu przycisku.'}</div>`;
   }
 
   function applyPreset(text,details){
@@ -147,8 +148,10 @@
       btn.disabled=true;btn.textContent='Generuję…';
       if(preview)preview.innerHTML=`<span>Generowanie obrazu AI przez ${providerLabel(provider)}…</span>`;
       if(result)result.innerHTML=`<pre>${Object.keys(dna||{}).length?'Avatar DNA aktywne. ':''}Łączenie z generatorem ${providerLabel(provider)}…</pre>`;
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),95000);
       try{
-        const response=await fetch(endpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,format,provider,model:provider==='higgsfield'?'soul_2':undefined})});
+        const response=await fetch(endpoint,{method:'POST',signal:controller.signal,headers:{'Content-Type':'application/json'},body:JSON.stringify({prompt,format,provider:'openai'})});
         const data=await response.json().catch(()=>({}));
         if(!response.ok||!data.image)throw new Error(data.error||`Błąd API ${response.status}`);
         if(preview)preview.innerHTML=`<img alt="Wygenerowane zdjęcie AI" src="${data.image}">`;
@@ -157,9 +160,13 @@
         toast(Object.keys(dna||{}).length?'Zdjęcie AI wygenerowane z Avatar DNA':'Zdjęcie AI wygenerowane');
       }catch(err){
         if(typeof localFallback==='function')localFallback();
+        const msg=err?.name==='AbortError'?'Przekroczono czas generowania obrazu':String(err.message||err);
         toast(`${providerLabel(provider)} niedostępny — aplikacja działa dalej w trybie lokalnym`);
-        if(result)result.insertAdjacentHTML('beforeend',`<div class="gen-note">${String(err.message||err)}</div>`);
-      }finally{btn.disabled=false;btn.textContent=old==='Generuj podgląd'?'Generuj zdjęcie AI':old;}
+        if(result)result.insertAdjacentHTML('beforeend',`<div class="gen-note">${msg}</div>`);
+      }finally{
+        clearTimeout(timeout);
+        btn.disabled=false;btn.textContent=old==='Generuj podgląd'?'Generuj zdjęcie AI':old;
+      }
     };
   }
 
