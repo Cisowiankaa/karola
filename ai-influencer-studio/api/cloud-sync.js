@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const MAX_BYTES = 900_000;
 const TIMEOUT_MS = 12_000;
 
@@ -7,42 +8,67 @@ function json(res, status, body) {
   return res.status(status).json(body);
 }
 
+function sameSecret(a, b) {
+  const aa = Buffer.from(String(a || ''), 'utf8');
+  const bb = Buffer.from(String(b || ''), 'utf8');
+  return aa.length > 0 && aa.length === bb.length && crypto.timingSafeEqual(aa, bb);
+}
+
+function config() {
+  const upstream = String(process.env.MAKE_CLOUD_SYNC_URL || '').trim();
+  const secret = String(process.env.CLOUD_SYNC_KEY || '').trim();
+  return { upstream, secret, configured: Boolean(upstream && secret) };
+}
+
+function statusPayload() {
+  const { upstream, secret, configured } = config();
+  return {
+    ok: true,
+    service: 'ai-influencer-cloud-sync',
+    configured,
+    provider: configured ? 'Make + Google Sheets' : 'local-only',
+    fallback: 'localStorage',
+    missing: [!upstream ? 'MAKE_CLOUD_SYNC_URL' : null, !secret ? 'CLOUD_SYNC_KEY' : null].filter(Boolean)
+  };
+}
+
 module.exports = async function handler(req, res) {
+  if (req.method === 'GET') return json(res, 200, statusPayload());
   if (req.method !== 'POST') return json(res, 405, { ok: false, code: 'METHOD_NOT_ALLOWED' });
 
-  const upstream = String(process.env.MAKE_CLOUD_SYNC_URL || '').trim();
   const action = String(req.body?.action || '').trim().toLowerCase();
-
-  if (action === 'status') {
-    return json(res, 200, {
-      ok: true,
-      service: 'ai-influencer-cloud-sync',
-      configured: Boolean(upstream),
-      provider: upstream ? 'Make + Google Sheets' : 'local-only',
-      fallback: 'localStorage'
-    });
-  }
-
+  if (action === 'status') return json(res, 200, statusPayload());
   if (!['push', 'pull'].includes(action)) {
     return json(res, 400, { ok: false, code: 'INVALID_ACTION', message: 'Dozwolone akcje: push, pull, status.' });
   }
 
-  if (!upstream) {
+  const { upstream, secret, configured } = config();
+  if (!configured) {
     return json(res, 503, {
       ok: false,
       code: 'CLOUD_SYNC_NOT_CONFIGURED',
-      message: 'Cloud Sync jest gotowy w aplikacji, ale MAKE_CLOUD_SYNC_URL nie jest jeszcze ustawiony.',
+      message: 'Cloud Sync jest gotowy w aplikacji, ale wymaga MAKE_CLOUD_SYNC_URL i CLOUD_SYNC_KEY.',
+      missing: [!upstream ? 'MAKE_CLOUD_SYNC_URL' : null, !secret ? 'CLOUD_SYNC_KEY' : null].filter(Boolean),
       fallback: 'localStorage'
     });
+  }
+
+  const provided = String(req.headers['x-cloud-sync-key'] || '');
+  if (!sameSecret(provided, secret)) {
+    return json(res, 401, { ok: false, code: 'CLOUD_SYNC_UNAUTHORIZED', message: 'Nieprawidłowy klucz Cloud Sync.' });
   }
 
   const body = {
     event: action === 'push' ? 'cloud_push' : 'cloud_pull',
     source: 'AI Influencer Studio',
-    syncKey: String(req.body?.syncKey || 'default').slice(0, 120),
+    syncKey: String(req.body?.syncKey || 'primary').slice(0, 120),
     updatedAt: new Date().toISOString(),
     payload: action === 'push' ? req.body?.payload ?? null : undefined
   };
+
+  if (action === 'push' && (!body.payload || Number(body.payload?.version) < 1 || typeof body.payload?.data !== 'object')) {
+    return json(res, 400, { ok: false, code: 'INVALID_SNAPSHOT', message: 'Nieprawidłowy snapshot Cloud Sync.' });
+  }
 
   const serialized = JSON.stringify(body);
   if (Buffer.byteLength(serialized, 'utf8') > MAX_BYTES) {
