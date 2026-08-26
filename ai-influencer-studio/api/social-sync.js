@@ -1,6 +1,7 @@
 const V=process.env.META_GRAPH_VERSION||'v26.0';
 const FB=`https://graph.facebook.com/${V}`;
 const IG=`https://graph.instagram.com/${V}`;
+const DEFAULT_META_PAGE_ID='273350126110966';
 
 function parseCookies(req){return String(req.headers.cookie||'').split(';').reduce((a,p)=>{const i=p.indexOf('=');if(i<0)return a;const k=p.slice(0,i).trim();const v=p.slice(i+1).trim();try{a[k]=decodeURIComponent(v)}catch{a[k]=v}return a},{})}
 function norm(v){return String(v||'').trim().replace(/^Bearer\s+/i,'').replace(/^['"]|['"]$/g,'').trim()}
@@ -16,7 +17,7 @@ module.exports=async function(req,res){
   const token=header||session||norm(process.env.META_IG_ACCESS_TOKEN)||legacy;
   const mode=String(c.aii_meta_auth_mode||'');
   const igId=String(req.headers['x-meta-ig-user-id']||c.aii_meta_ig_user_id||process.env.META_IG_USER_ID||'').trim();
-  const pageId=String(c.aii_meta_page_id||process.env.META_PAGE_ID||'').trim();
+  const pageId=String(c.aii_meta_page_id||process.env.META_PAGE_ID||DEFAULT_META_PAGE_ID).trim();
   const base=(mode==='facebook'||session.startsWith('EAA'))?FB:IG;
   const profiles=[],items=[],metrics={},sources={instagram:[],facebook:[]};
 
