@@ -1,0 +1,1 @@
+Force Vercel production rebuild for latest Meta OAuth changes.
