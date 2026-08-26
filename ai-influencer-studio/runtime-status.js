@@ -3,8 +3,14 @@
   const statusEl = () => document.getElementById('systemStatus');
   const copilotStateEl = () => document.querySelector('.copilot-card span');
 
+  function persistMode(mode){
+    try{localStorage.setItem('aii-mode',mode)}catch{}
+    try{if(typeof runtime!=='undefined'&&runtime)runtime.mode=mode}catch{}
+  }
+
   function setStatus(mode, title) {
     const el = statusEl();
+    persistMode(mode);
     if (!el) return;
     el.dataset.detectedMode = mode;
     el.title = title || '';
@@ -21,6 +27,23 @@
       el.classList.remove('online');
       el.classList.add('offline');
     }
+    document.dispatchEvent(new CustomEvent('aii:runtime-detected',{detail:{mode}}));
+  }
+
+  function setSafeInitialStatus(){
+    if(!navigator.onLine){setStatus('offline','Brak połączenia z internetem. Dane lokalne pozostają dostępne.');return;}
+    setStatus('online-local','Internet dostępny · AI jeszcze niepotwierdzone · używam bezpiecznego trybu lokalnego');
+    const c=copilotStateEl();
+    if(c)c.textContent='Tryb lokalny — sprawdzanie AI';
+  }
+
+  function loadCalendarHandoff(){
+    if(window.AIIContentCalendarHandoff||document.querySelector('script[data-aii-calendar-handoff]'))return;
+    const s=document.createElement('script');
+    s.src='content-calendar-handoff.js?v=20260827-2';
+    s.dataset.aiiCalendarHandoff='1';
+    s.defer=true;
+    document.head.appendChild(s);
   }
 
   async function ping(path) {
@@ -42,6 +65,7 @@
       setStatus('offline', 'Brak połączenia z internetem. Dane lokalne pozostają dostępne.');
       const c = copilotStateEl();
       if (c) c.textContent = 'Tryb lokalny';
+      window.AII_RUNTIME_HEALTH={checkedAt:new Date().toISOString(),online:false,social:{ok:false},ai:{ok:false}};
       return;
     }
 
@@ -72,6 +96,8 @@
   window.addEventListener('online', detectRuntime);
   window.addEventListener('offline', detectRuntime);
   document.addEventListener('DOMContentLoaded', () => {
+    setSafeInitialStatus();
+    loadCalendarHandoff();
     if (typeof window.AII_refreshDashboard === 'function') window.AII_refreshDashboard();
     detectRuntime();
     setInterval(detectRuntime, 60000);
