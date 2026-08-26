@@ -16,9 +16,24 @@
     return localStorage.getItem(ENDPOINT_KEY)||DEFAULT_ENDPOINT;
   }
 
+  function friendlyMetaMessage(meta={}){
+    const raw=String(meta.message||'');
+    if(meta.errorCode==='META_REAUTH_REQUIRED' || /HTTP\s*401|API access blocked|OAuthException/i.test(raw)){
+      return 'Meta API podłączone, ale dostęp został zablokowany — wymagane ponowne połączenie/autoryzacja Meta.';
+    }
+    if(meta.errorCode==='META_NOT_CONFIGURED' || /Brak podłączonego API/i.test(raw)){
+      return 'Meta API endpoint jest skonfigurowany. Sprawdzanie autoryzacji…';
+    }
+    if(/Błąd synchronizacji:\s*HTTP\s*502/i.test(raw)){
+      return 'Meta API jest podłączone, ale synchronizacja została odrzucona przez Meta.';
+    }
+    return raw;
+  }
+
   function setMeta(patch){
     const prev=read(META_KEY,{status:'idle',lastSync:null,message:'Meta API skonfigurowane'});
     const next={...prev,...patch,configured:true,endpoint:ensureEndpoint()};
+    next.message=friendlyMetaMessage(next);
     save(META_KEY,next);
     renderMeta(next);
     return next;
@@ -28,8 +43,9 @@
     const dot=document.getElementById('socialSyncDot');
     const msg=document.getElementById('socialSyncMessage');
     const last=document.getElementById('socialLastSync');
+    const display=friendlyMetaMessage(meta);
     if(dot)dot.className='social-sync-dot '+(meta.status==='ok'?'ok':meta.status==='syncing'?'wait':meta.status==='error'?'err':'');
-    if(msg)msg.textContent=meta.message||'';
+    if(msg)msg.textContent=display||'Meta API skonfigurowane';
     if(last){
       const text=meta.lastSync?new Date(meta.lastSync).toLocaleString('pl-PL'):'brak poprawnej synchronizacji';
       last.textContent='Ostatnia poprawna aktualizacja: '+text;
@@ -48,7 +64,7 @@
 
   function friendlyError(data,status){
     if(data?.code==='META_REAUTH_REQUIRED' || data?.metaType==='OAuthException' || /access blocked/i.test(String(data?.error||''))){
-      return 'Meta API podłączone, ale dostęp został zablokowany — wymagane ponowne połączenie Meta.';
+      return 'Meta API podłączone, ale dostęp został zablokowany — wymagane ponowne połączenie/autoryzacja Meta.';
     }
     if(data?.code==='META_NOT_CONFIGURED')return 'Meta API nie jest jeszcze skonfigurowane na serwerze.';
     return data?.message || data?.error || `Błąd synchronizacji Meta (HTTP ${status})`;
@@ -98,10 +114,16 @@
 
   function repairLegacyMessage(){
     const meta=read(META_KEY,{});
-    const legacy=/Brak podłączonego API|Błąd synchronizacji:\s*HTTP\s*(401|502)/i.test(String(meta.message||''));
+    const raw=String(meta.message||'');
+    const legacy=/Brak podłączonego API|Błąd synchronizacji:\s*HTTP\s*(401|502)|API access blocked|OAuthException/i.test(raw);
     if(legacy){
-      setMeta({status:'error',message:'Meta API jest podłączone. Trwa sprawdzanie autoryzacji…'});
-      sync({silent:true});
+      const reauth=/401|access blocked|OAuthException/i.test(raw) || meta.errorCode==='META_REAUTH_REQUIRED';
+      const patch=reauth
+        ? {status:'error',message:'Meta API podłączone, ale dostęp został zablokowany — wymagane ponowne połączenie/autoryzacja Meta.',errorCode:'META_REAUTH_REQUIRED'}
+        : {status:'error',message:'Meta API endpoint jest skonfigurowany. Sprawdzanie autoryzacji…'};
+      const next={...meta,...patch,configured:true,endpoint:ensureEndpoint()};
+      save(META_KEY,next);
+      renderMeta(next);
     }else renderMeta(meta);
   }
 
@@ -114,10 +136,11 @@
   document.addEventListener('DOMContentLoaded',()=>{
     init();
     const root=document.getElementById('content');
-    if(root)new MutationObserver(()=>setTimeout(()=>{bindButton();renderMeta();},30)).observe(root,{childList:true,subtree:true});
+    if(root)new MutationObserver(()=>setTimeout(()=>{bindButton();repairLegacyMessage();},30)).observe(root,{childList:true,subtree:true});
     setTimeout(()=>sync({silent:true}),800);
+    setInterval(()=>repairLegacyMessage(),1200);
     setInterval(()=>{if(navigator.onLine!==false)sync({silent:true});},60000);
   });
 
-  window.AIISocialSync={sync,ensureEndpoint};
+  window.AIISocialSync={sync,ensureEndpoint,repairLegacyMessage};
 })();
