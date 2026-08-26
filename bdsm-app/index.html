@@ -207,6 +207,9 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
 
 
 
+
+
+
 <!-- BDSM_RUNTIME_INLINE_START -->
 <script>
 (() => {
@@ -1176,7 +1179,9 @@ const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
 const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
 const pad=n=>String(n).padStart(2,'0');
 const keyOf=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const monthKey=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}`;
 const same=(v,k)=>{if(!v)return false;const d=new Date(v);return !Number.isNaN(d.getTime())&&keyOf(d)===k};
+const inMonth=(v,m)=>{if(!v)return false;const d=new Date(v);return !Number.isNaN(d.getTime())&&monthKey(d)===m};
 const reports=()=>{const x=read(KEY,[]);return Array.isArray(x)?x:[]};
 const saveReports=x=>write(KEY,x);
 const dailyBtn=()=>[...document.querySelectorAll('#nav button')].find(x=>x.textContent.includes('Raport dzienny'));
@@ -1213,7 +1218,7 @@ function catchUp(){
 function ensureStyles(){
  if(document.querySelector('#dailyReportsStyles'))return;
  const st=document.createElement('style');st.id='dailyReportsStyles';
- st.textContent='.dr-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.dr-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dr-toolbar input{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:9px}.dr-list{display:grid;gap:8px;margin-top:14px}.dr-row{display:grid;grid-template-columns:120px repeat(6,minmax(70px,1fr)) auto;gap:8px;align-items:center;padding:11px;border:1px solid #252d3c;border-radius:10px;background:#0c121c}.dr-detail{margin-top:14px}.dr-pills{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.dr-pill{padding:6px 9px;border:1px solid #313b4f;border-radius:999px;font-size:11px}.mr-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}.mr-card{background:#0c121c;border:1px solid #252d3c;border-radius:12px;padding:14px}.mr-card strong{display:block;font-size:24px;margin-top:6px}@media(max-width:1000px){.dr-row{grid-template-columns:110px 1fr auto}.dr-stat{display:none}.mr-grid{grid-template-columns:repeat(2,1fr)}}';
+ st.textContent='.dr-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}.dr-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.dr-toolbar input{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:9px}.dr-list{display:grid;gap:8px;margin-top:14px}.dr-row{display:grid;grid-template-columns:120px repeat(6,minmax(70px,1fr)) auto;gap:8px;align-items:center;padding:11px;border:1px solid #252d3c;border-radius:10px;background:#0c121c}.dr-detail{margin-top:14px}.dr-pills{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.dr-pill{padding:6px 9px;border:1px solid #313b4f;border-radius:999px;font-size:11px}.mr-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;margin:14px 0}.mr-card{background:#0c121c;border:1px solid #252d3c;border-radius:12px;padding:14px}.mr-card strong{display:block;font-size:24px;margin-top:6px}.mr-section{margin-top:16px}.mr-table{width:100%;border-collapse:collapse}.mr-table th,.mr-table td{padding:9px;border-bottom:1px solid #252d3c;text-align:left;font-size:12px}.mr-muted{color:#98a2b3;font-size:12px}@media(max-width:1000px){.dr-row{grid-template-columns:110px 1fr auto}.dr-stat{display:none}.mr-grid{grid-template-columns:repeat(2,1fr)}}';
  document.head.appendChild(st);
 }
 
@@ -1253,14 +1258,40 @@ function renderDetail(date){
  box.innerHTML=`<div class="panel"><h3>Raport dzienny — ${esc(label)}</h3><div class="dr-pills"><span class="dr-pill">⚠ Przewinienia: ${x.offences||0}</span><span class="dr-pill">📚 Zadania: ${x.tasks||0}</span><span class="dr-pill">⚖/⊘ Wpisy: ${x.events||0}</span><span class="dr-pill">📝 Uwagi: ${x.notes||0}</span><span class="dr-pill">🕐 Dziennik: ${x.hourly||0}</span><span class="dr-pill">☑ Checklista: ${x.checklist_pct||0}%</span><span class="dr-pill">★ Punkty: ${x.points||0}</span></div><p><strong>Plan dnia:</strong><br>${esc(x.plan||'—')}</p><p><strong>Podsumowanie dnia:</strong><br>${esc(x.summary||'—')}</p><p><strong>Status dnia:</strong> ${x.day_done?'✓ zakończony':'otwarty'}</p><button class="btn primary" data-dr-print="${date}">📄 Zapisz jako PDF</button></div>`;
 }
 
-function openMonthly(){
+function monthData(m){
+ const events=read(EVENTS,[]).filter(e=>inMonth(e.start||e.created_at,m));
+ const offences=read(OFF,[]).filter(x=>inMonth(x.occurred_at||x.created_at,m));
+ const tasks=read(TASKS,[]).filter(x=>inMonth(x.due_at||x.created_at,m));
+ const notes=read(NOTES,[]).filter(x=>inMonth(x.issued_at||x.date||x.created_at,m));
+ const hours=read(HOURS,[]).filter(x=>String(x.date||'').slice(0,7)===m);
+ const days=reports().filter(x=>String(x.date||'').slice(0,7)===m).sort((a,b)=>a.date.localeCompare(b.date));
+ const points=events.reduce((s,e)=>s+(Number(e.points_delta!=null?e.points_delta:(e.points!=null?e.points:0))||0),0);
+ return {events,offences,tasks,notes,hours,days,points};
+}
+
+function renderMonthly(m){
  ensureStyles();const view=document.querySelector('#view-reports'),box=document.querySelector('#reportsView');if(!view||!box)return;
- showOnly('#view-reports',monthlyBtn());
- const panel=view.querySelector('.panel > h3');if(panel)panel.textContent='Raport miesięczny';
- const now=new Date();const ev=read(EVENTS,[]).filter(e=>{const d=new Date(e.start||e.created_at);return !Number.isNaN(d.getTime())&&d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth()});
- const types=[['spanking','Spanking'],['kara','Kary'],['szlaban','Szlabany'],['nagroda','Nagrody']];
- const points=ev.reduce((s,e)=>s+(Number(e.points_delta!=null?e.points_delta:(e.points!=null?e.points:0))||0),0);
- box.innerHTML=`<div><h3 style="margin-bottom:6px">${esc(now.toLocaleDateString('pl-PL',{month:'long',year:'numeric'}))}</h3><small style="color:#98a2b3">Podsumowanie bieżącego miesiąca.</small><div class="mr-grid">${types.map(([k,l])=>`<div class="mr-card">${l}<strong>${ev.filter(e=>String(e.type||'').toLowerCase()===k).length}</strong></div>`).join('')}<div class="mr-card">Punkty<strong>${points}</strong></div></div></div>`;
+ const data=monthData(m),[y,mo]=m.split('-').map(Number),label=new Date(y,mo-1,1).toLocaleDateString('pl-PL',{month:'long',year:'numeric'});
+ const count=t=>data.events.filter(e=>String(e.type||'').toLowerCase()===t).length;
+ const avg=data.days.length?Math.round(data.days.reduce((s,d)=>s+(Number(d.checklist_pct)||0),0)/data.days.length):0;
+ box.innerHTML=`<div class="dr-head"><div><h3 style="margin-bottom:4px">📊 Raport miesięczny — ${esc(label)}</h3><div class="mr-muted">Pełne podsumowanie wybranego miesiąca. Dane informacyjne — bez automatycznej zmiany konsekwencji.</div></div><div class="dr-toolbar"><input type="month" id="mrMonth" value="${esc(m)}"><button class="btn" id="mrOpen">Pokaż miesiąc</button><button class="btn" id="mrCurrent">Bieżący</button><button class="btn primary" id="mrPdf">📄 PDF miesiąca</button></div></div><div class="mr-grid"><div class="mr-card">⚠ Przewinienia<strong>${data.offences.length}</strong></div><div class="mr-card">📚 Zadania<strong>${data.tasks.length}</strong></div><div class="mr-card">📝 Uwagi<strong>${data.notes.length}</strong></div><div class="mr-card">🕐 Dziennik<strong>${data.hours.length}</strong></div><div class="mr-card">★ Punkty<strong>${data.points}</strong></div><div class="mr-card">✋ Spanking<strong>${count('spanking')}</strong></div><div class="mr-card">⚖ Kary<strong>${count('kara')}</strong></div><div class="mr-card">⊘ Szlabany<strong>${count('szlaban')}</strong></div><div class="mr-card">🎁 Nagrody<strong>${count('nagroda')}</strong></div><div class="mr-card">☑ Śr. checklisty<strong>${avg}%</strong></div></div><div class="mr-section"><h3>Dni miesiąca</h3>${data.days.length?`<div style="overflow:auto"><table class="mr-table"><thead><tr><th>Data</th><th>Przewinienia</th><th>Zadania</th><th>Wpisy</th><th>Uwagi</th><th>Dziennik</th><th>Checklista</th><th>Punkty</th></tr></thead><tbody>${data.days.map(d=>`<tr><td>${esc(new Date(d.date+'T12:00:00').toLocaleDateString('pl-PL'))}</td><td>${d.offences||0}</td><td>${d.tasks||0}</td><td>${d.events||0}</td><td>${d.notes||0}</td><td>${d.hourly||0}</td><td>${d.checklist_pct||0}%</td><td>${d.points||0}</td></tr>`).join('')}</tbody></table></div>`:'<div class="empty">Brak raportów dziennych w tym miesiącu.</div>'}</div>`;
+ const monthInput=box.querySelector('#mrMonth');
+ box.querySelector('#mrOpen').onclick=()=>monthInput.value&&renderMonthly(monthInput.value);
+ box.querySelector('#mrCurrent').onclick=()=>renderMonthly(monthKey(new Date()));
+ box.querySelector('#mrPdf').onclick=()=>printMonth(m);
+}
+
+function openMonthly(){
+ catchUp();ensureStyles();showOnly('#view-reports',monthlyBtn());
+ const title=document.querySelector('#view-reports .panel > h3');if(title)title.textContent='Raport miesięczny';
+ renderMonthly(monthKey(new Date()));
+}
+
+function printMonth(m){
+ const data=monthData(m),[y,mo]=m.split('-').map(Number),label=new Date(y,mo-1,1).toLocaleDateString('pl-PL',{month:'long',year:'numeric'}),q=window.open('','_blank');if(!q)return;
+ const count=t=>data.events.filter(e=>String(e.type||'').toLowerCase()===t).length;
+ const avg=data.days.length?Math.round(data.days.reduce((s,d)=>s+(Number(d.checklist_pct)||0),0)/data.days.length):0;
+ q.document.write(`<!doctype html><meta charset="utf-8"><title>Raport miesięczny ${esc(m)}</title><style>@page{size:A4;margin:14mm}body{font-family:Arial,sans-serif;font-size:11px;color:#111}h1{font-size:20px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.box{border:1px solid #bbb;padding:8px}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border-bottom:1px solid #ddd;padding:6px;text-align:left}</style><h1>Raport miesięczny — ${esc(label)}</h1><p>Raport informacyjny. Nie zmienia automatycznie statusów, punktów ani konsekwencji.</p><div class="grid"><div class="box">⚠ Przewinienia: <b>${data.offences.length}</b></div><div class="box">📚 Zadania: <b>${data.tasks.length}</b></div><div class="box">📝 Uwagi: <b>${data.notes.length}</b></div><div class="box">🕐 Dziennik: <b>${data.hours.length}</b></div><div class="box">★ Punkty: <b>${data.points}</b></div><div class="box">☑ Śr. checklisty: <b>${avg}%</b></div><div class="box">✋ Spanking: <b>${count('spanking')}</b></div><div class="box">⚖ Kary: <b>${count('kara')}</b></div><div class="box">⊘ Szlabany: <b>${count('szlaban')}</b></div><div class="box">🎁 Nagrody: <b>${count('nagroda')}</b></div></div>${data.days.length?`<h2>Dni miesiąca</h2><table><thead><tr><th>Data</th><th>⚠</th><th>📚</th><th>⚖/⊘</th><th>📝</th><th>🕐</th><th>☑</th><th>★</th></tr></thead><tbody>${data.days.map(d=>`<tr><td>${esc(new Date(d.date+'T12:00:00').toLocaleDateString('pl-PL'))}</td><td>${d.offences||0}</td><td>${d.tasks||0}</td><td>${d.events||0}</td><td>${d.notes||0}</td><td>${d.hourly||0}</td><td>${d.checklist_pct||0}%</td><td>${d.points||0}</td></tr>`).join('')}</tbody></table>`:''}<script>onload=()=>setTimeout(()=>print(),200)<\/script>`);q.document.close();
 }
 
 function printReport(date){
@@ -1280,7 +1311,7 @@ function install(){
  window.addEventListener('focus',()=>{catchUp();renderDaily()});
  document.addEventListener('visibilitychange',()=>{if(!document.hidden){catchUp();renderDaily()}});
  setInterval(()=>{catchUp();renderDaily()},3600000);
- window.bdsmDailyReports={list:reports,refresh:()=>{catchUp();renderDaily()},open:openDaily,openDate:renderDetail,print:printReport,openMonthly};
+ window.bdsmDailyReports={list:reports,refresh:()=>{catchUp();renderDaily()},open:openDaily,openDate:renderDetail,print:printReport,openMonthly,printMonth};
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
