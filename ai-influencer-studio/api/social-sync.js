@@ -5,12 +5,9 @@ const IG_GRAPH = `https://graph.instagram.com/${GRAPH_VERSION}`;
 
 function cors(res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  // Public read-only endpoint: allow the production domain, GitHub Pages and immutable Vercel deployment URLs.
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  // Browser should revalidate, while Vercel CDN can safely serve the same Meta snapshot
-  // for 60 seconds and refresh it in the background for up to 5 minutes.
   res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
   res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 }
@@ -46,6 +43,7 @@ async function graph(base, path, token) {
     const err = new Error(data?.error?.message || `Meta Graph HTTP ${r.status}`);
     err.metaCode = data?.error?.code;
     err.metaType = data?.error?.type;
+    err.httpStatus = r.status;
     throw err;
   }
   return data;
@@ -55,6 +53,11 @@ function mediaType(type) {
   if (type === 'VIDEO') return 'Reels';
   if (type === 'CAROUSEL_ALBUM') return 'Carousel';
   return 'Post';
+}
+
+function authProblem(error) {
+  const message = String(error?.message || '');
+  return error?.metaType === 'OAuthException' || /access blocked|access token|oauth|session|permission/i.test(message);
 }
 
 module.exports = async function handler(req, res) {
@@ -72,6 +75,7 @@ module.exports = async function handler(req, res) {
       ok: false,
       service: 'meta-social-sync',
       configured: false,
+      code: 'META_NOT_CONFIGURED',
       missing: [
         !token ? 'META_ACCESS_TOKEN' : null,
         !igUserId ? 'META_IG_USER_ID' : null,
@@ -169,9 +173,16 @@ module.exports = async function handler(req, res) {
       metrics
     });
   } catch (error) {
-    return res.status(502).json({
+    const blocked = authProblem(error);
+    return res.status(blocked ? 401 : 502).json({
       ok: false,
+      configured: true,
+      connected: false,
+      code: blocked ? 'META_REAUTH_REQUIRED' : 'META_SYNC_FAILED',
       error: error?.message || 'Meta synchronization failed',
+      message: blocked
+        ? 'Meta API jest podłączone, ale dostęp został zablokowany. Wymagane jest ponowne połączenie/autoryzacja Meta.'
+        : 'Meta API jest podłączone, ale synchronizacja nie powiodła się.',
       metaCode: error?.metaCode || null,
       metaType: error?.metaType || null,
       tokenDiagnostics: tokenDiagnostics(rawToken, token)
