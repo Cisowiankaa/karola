@@ -14,33 +14,47 @@
     .social-provider-card{padding:12px;border:1px solid #eceef5;border-radius:12px;background:#fafafe;min-height:92px}
     .social-provider-card b{display:block;font-size:9px;margin-bottom:5px}.social-provider-card strong{display:block;font-size:10px;margin-bottom:5px}
     .social-provider-card small{display:block;font-size:7.5px;line-height:1.45;color:#777f8d;word-break:break-word}
-    .social-provider-card.live{background:#f1fbf5;border-color:#d5efdf}.social-provider-card.warn{background:#fffaf0;border-color:#f1e3bd}.social-provider-card.local{background:#f7f4ff;border-color:#e2d9fb}
+    .social-provider-card.live{background:#f1fbf5;border-color:#d5efdf}.social-provider-card.warn{background:#fffaf0;border-color:#f1e3bd}.social-provider-card.local{background:#f7f4ff;border-color:#e2d9fb}.social-provider-card.error{background:#fff4f4;border-color:#f0d0d0}
     .social-connect-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
     @media(max-width:900px){.social-provider-grid{grid-template-columns:1fr 1fr}}@media(max-width:560px){.social-provider-grid{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
 
-  const yes=v=>Boolean(v);
   function card(name,state,detail,cls='warn'){
     return `<div class="social-provider-card ${cls}"><b>${esc(name)}</b><strong>${esc(state)}</strong><small>${esc(detail)}</small></div>`;
+  }
+
+  function instagramCard(ig,m){
+    if(ig.metaHealthy)return card('Instagram','META LIVE','Autoryzacja Meta działa poprawnie.','live');
+    if(ig.metaConfigured&&ig.metaHealthCode==='REAUTH_REQUIRED'){
+      const fallback=ig.apifyConfigured?'Fallback Apify jest dostępny.':'Brak Apify — używane są ostatnie dane lokalne.';
+      return card('Instagram','META: WYMAGA AUTORYZACJI',`Meta jest skonfigurowane, ale token został odrzucony. ${fallback}`,'error');
+    }
+    if(ig.apifyConfigured)return card('Instagram','APIFY GOTOWY','Meta nie jest gotowe, ale fallback Apify jest skonfigurowany.','live');
+    return card('Instagram','TRYB LOKALNY',`Brak aktywnego źródła LIVE. Potrzebne: ${(m.instagram||[]).join(', ')||'konfiguracja Meta/Apify'}`,'warn');
+  }
+
+  function facebookCard(fb,m){
+    if(fb.metaHealthy)return card('Facebook','META LIVE','Autoryzacja Facebook działa poprawnie.','live');
+    if(fb.metaConfigured&&fb.metaHealthCode==='REAUTH_REQUIRED')return card('Facebook','META: WYMAGA AUTORYZACJI','Połączenie istnieje, ale Meta odrzuca aktualne poświadczenie.','error');
+    return card('Facebook','TRYB LOKALNY',`Brak aktywnego źródła LIVE. Potrzebne: ${(m.facebook||[]).join(', ')||'konfiguracja Meta'}`,'warn');
+  }
+
+  function tiktokCard(tt,m){
+    if(tt.healthy)return card('TikTok','TIKTOK LIVE','TikTok API jest skonfigurowane.','live');
+    if(tt.apifyConfigured)return card('TikTok','APIFY READY','Apify jest dostępne jako warstwa awaryjna; integracja aktora TikTok może zostać podpięta w kolejnym kroku.','live');
+    return card('TikTok','TRYB LOKALNY',`Brak źródła LIVE. Potrzebne: ${(m.tiktok||[]).join(', ')||'konfiguracja TikTok'}`,'warn');
   }
 
   function html(data){
     const p=data?.providers||{},m=data?.missing||{};
     const ig=p.instagram||{},fb=p.facebook||{},tt=p.tiktok||{};
-    const igState=ig.metaConfigured?'META GOTOWE':ig.apifyConfigured?'APIFY GOTOWY':'TRYB LOKALNY';
-    const igCls=ig.metaConfigured||ig.apifyConfigured?'live':'warn';
-    const igDetail=ig.metaConfigured?'Instagram może używać Meta LIVE.':ig.apifyConfigured?'Meta niedostępne — dostępny fallback Apify.':`Brak LIVE. Potrzebne: ${(m.instagram||[]).join(', ')||'konfiguracja Meta/Apify'}`;
-    const fbState=fb.metaConfigured?'META GOTOWE':'TRYB LOKALNY';
-    const fbDetail=fb.metaConfigured?'Facebook może używać Meta LIVE.':`Brak LIVE. Potrzebne: ${(m.facebook||[]).join(', ')||'konfiguracja Meta'}`;
-    const ttState=tt.configured?'TIKTOK GOTOWY':tt.apifyConfigured?'APIFY READY':'TRYB LOKALNY';
-    const ttDetail=tt.configured?'TikTok API skonfigurowane.':tt.apifyConfigured?'Możliwy fallback Apify po podpięciu aktora TikTok.':`Brak LIVE. Potrzebne: ${(m.tiktok||[]).join(', ')||'konfiguracja TikTok'}`;
     return `<section class="social-connect-hub" id="socialConnectHub">
-      <div class="social-connect-head"><div><b>Social Connect Hub</b><span>Źródła danych i automatyczne fallbacki</span></div><span>${esc(data?.checkedAt?new Date(data.checkedAt).toLocaleTimeString('pl-PL'):'')}</span></div>
+      <div class="social-connect-head"><div><b>Social Connect Hub</b><span>Źródła danych, stan autoryzacji i automatyczne fallbacki</span></div><span>${esc(data?.checkedAt?new Date(data.checkedAt).toLocaleTimeString('pl-PL'):'')}</span></div>
       <div class="social-provider-grid">
-        ${card('Instagram',igState,igDetail,igCls)}
-        ${card('Facebook',fbState,fbDetail,fb.metaConfigured?'live':'warn')}
-        ${card('TikTok',ttState,ttDetail,tt.configured||tt.apifyConfigured?'live':'warn')}
+        ${instagramCard(ig,m)}
+        ${facebookCard(fb,m)}
+        ${tiktokCard(tt,m)}
         ${card('Dane lokalne','ZAWSZE DOSTĘPNE','Ostatnie zapisane profile i publikacje pozostają dostępne przy awarii API.','local')}
       </div>
       <div class="social-connect-actions"><button class="ghost" type="button" id="socialProviderRefresh">↻ Sprawdź źródła</button></div>
