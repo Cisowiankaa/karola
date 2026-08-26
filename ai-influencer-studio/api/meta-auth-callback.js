@@ -1,5 +1,6 @@
 const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v26.0';
 const FRONTEND = process.env.META_FRONTEND_URL || 'https://ai-influencer-studio-api.vercel.app/';
+const DEFAULT_META_APP_ID = '2272021750228175';
 
 function cookies(req) {
   return String(req.headers.cookie || '').split(';').reduce((acc, part) => {
@@ -51,18 +52,8 @@ module.exports = async function handler(req, res) {
       const appSecret = String(process.env.META_INSTAGRAM_APP_SECRET || '').trim();
       if (!appId || !appSecret) return res.status(503).send('Brak META_INSTAGRAM_APP_ID lub META_INSTAGRAM_APP_SECRET w Vercel.');
 
-      const body = new URLSearchParams({
-        client_id: appId,
-        client_secret: appSecret,
-        grant_type: 'authorization_code',
-        redirect_uri: redirectUri,
-        code
-      });
-      const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body
-      });
+      const body = new URLSearchParams({client_id:appId,client_secret:appSecret,grant_type:'authorization_code',redirect_uri:redirectUri,code});
+      const tokenRes = await fetch('https://api.instagram.com/oauth/access_token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body});
       const short = await tokenRes.json().catch(() => ({}));
       if (!tokenRes.ok || !short.access_token) {
         res.setHeader('Set-Cookie', clearOauthCookies());
@@ -78,30 +69,25 @@ module.exports = async function handler(req, res) {
         longUrl.searchParams.set('access_token',short.access_token);
         const longRes = await fetch(longUrl);
         const long = await longRes.json().catch(() => ({}));
-        if (longRes.ok && long.access_token) {
-          accessToken = long.access_token;
-          expiresIn = Number(long.expires_in) || 60 * 24 * 60 * 60;
-        }
+        if (longRes.ok && long.access_token) { accessToken = long.access_token; expiresIn = Number(long.expires_in) || 60*24*60*60; }
       } catch {}
 
-      const maxAge = Math.max(300, Math.min(expiresIn, 60 * 24 * 60 * 60));
+      const maxAge = Math.max(300, Math.min(expiresIn, 60*24*60*60));
       res.setHeader('Set-Cookie', [
         `aii_meta_token=${encodeURIComponent(accessToken)}; ${cookieBase}; Max-Age=${maxAge}`,
         `aii_meta_ig_user_id=${encodeURIComponent(String(short.user_id || ''))}; ${cookieBase}; Max-Age=${maxAge}`,
         `aii_meta_auth_mode=instagram; ${cookieBase}; Max-Age=${maxAge}`,
         ...clearOauthCookies()
       ]);
-
-      const target = new URL(FRONTEND);
-      target.searchParams.set('meta_connected','1');
+      const target = new URL(FRONTEND); target.searchParams.set('meta_connected','1');
       return res.redirect(302,target.toString());
     }
 
-    const legacyId = String(process.env.META_APP_ID || '').trim();
+    const legacyId = String(process.env.META_APP_ID || DEFAULT_META_APP_ID).trim();
     const legacySecret = String(process.env.META_APP_SECRET || '').trim();
     const appId = String(process.env.META_FACEBOOK_APP_ID || legacyId).trim();
     const appSecret = String(process.env.META_FACEBOOK_APP_SECRET || legacySecret).trim();
-    if (!appId || !appSecret) return res.status(503).send('Brak META_FACEBOOK_APP_ID i META_FACEBOOK_APP_SECRET (lub jawnie META_APP_ID i META_APP_SECRET jako legacy Facebook App) w Vercel.');
+    if (!appSecret) return res.status(503).send('Brakuje tylko sekretu Meta w Vercel: ustaw META_APP_SECRET lub META_FACEBOOK_APP_SECRET.');
 
     const tokenUrl = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`);
     tokenUrl.searchParams.set('client_id', appId);
@@ -122,7 +108,7 @@ module.exports = async function handler(req, res) {
 
     const ig = page.instagram_business_account || {};
     const pageToken = page.access_token || tokenData.access_token;
-    const maxAge = 60 * 24 * 60 * 60;
+    const maxAge = 60*24*60*60;
     res.setHeader('Set-Cookie', [
       `aii_meta_token=${encodeURIComponent(pageToken)}; ${cookieBase}; Max-Age=${maxAge}`,
       `aii_meta_ig_user_id=${encodeURIComponent(String(ig.id || ''))}; ${cookieBase}; Max-Age=${maxAge}`,
