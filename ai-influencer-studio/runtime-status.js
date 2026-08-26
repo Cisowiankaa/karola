@@ -43,6 +43,7 @@
   }
   function loadCalendarHandoff(){if(!window.AIIContentCalendarHandoff)loadScriptOnce('content-calendar-handoff.js?v=20260827-2','aii-calendar-handoff')}
   function loadOfflineRuntime(){if(!window.AIIOfflineRuntime)loadScriptOnce('offline-runtime.js?v=20260827-1','aii-offline-runtime')}
+  function loadPwaRuntime(){if(!window.AIIPwaRuntime)loadScriptOnce('pwa-runtime.js?v=20260827-1','aii-pwa-runtime')}
 
   async function ping(path) {
     const ctrl = new AbortController();
@@ -93,12 +94,14 @@
   setSafeInitialStatus();
   loadCalendarHandoff();
   loadOfflineRuntime();
+  loadPwaRuntime();
   window.AII_detectRuntime = detectRuntime;
   window.addEventListener('online', detectRuntime);
   window.addEventListener('offline', detectRuntime);
   document.addEventListener('DOMContentLoaded', () => {
     loadCalendarHandoff();
     loadOfflineRuntime();
+    loadPwaRuntime();
     if (typeof window.AII_refreshDashboard === 'function') window.AII_refreshDashboard();
     detectRuntime();
     setInterval(detectRuntime, 60000);
