@@ -5,10 +5,12 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).send('Method not allowed');
 
   const requested = String(req.query.mode || '').toLowerCase();
+  const legacyId = String(process.env.META_APP_ID || '2272021750228175').trim();
+  const legacySecret = String(process.env.META_APP_SECRET || '').trim();
   const instagramId = String(process.env.META_INSTAGRAM_APP_ID || '').trim();
   const instagramSecret = String(process.env.META_INSTAGRAM_APP_SECRET || '').trim();
-  const facebookId = String(process.env.META_FACEBOOK_APP_ID || '').trim();
-  const facebookSecret = String(process.env.META_FACEBOOK_APP_SECRET || '').trim();
+  const facebookId = String(process.env.META_FACEBOOK_APP_ID || legacyId).trim();
+  const facebookSecret = String(process.env.META_FACEBOOK_APP_SECRET || legacySecret).trim();
 
   const instagramReady = Boolean(instagramId && instagramSecret);
   const facebookReady = Boolean(facebookId && facebookSecret);
@@ -20,12 +22,14 @@ module.exports = async function handler(req, res) {
     return res.status(503).json({
       ok: false,
       code: 'META_OAUTH_NOT_CONFIGURED',
-      message: mode === 'facebook'
-        ? 'Facebook Login nie jest skonfigurowany. Ustaw META_FACEBOOK_APP_ID i META_FACEBOOK_APP_SECRET.'
-        : 'Instagram Login nie jest skonfigurowany. Ustaw META_INSTAGRAM_APP_ID i META_INSTAGRAM_APP_SECRET.',
+      message: mode === 'instagram'
+        ? 'Instagram Login nie jest skonfigurowany. Ustaw META_INSTAGRAM_APP_ID i META_INSTAGRAM_APP_SECRET.'
+        : 'Meta Login nie ma dostępnego sekretu aplikacji. Ustaw META_APP_SECRET lub META_FACEBOOK_APP_SECRET.',
       mode: mode || null,
       instagramReady,
       facebookReady,
+      legacyAppIdPresent: Boolean(legacyId),
+      legacyAppSecretPresent: Boolean(legacySecret),
       callback: 'https://ai-influencer-studio-api.vercel.app/api/meta-auth-callback'
     });
   }
