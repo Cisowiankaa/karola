@@ -133,9 +133,34 @@
     });
   }
 
-  function nextDate(){
-    const d=new Date();d.setDate(d.getDate()+1);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  function formatDate(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+  function nextDate(){const d=new Date();d.setDate(d.getDate()+1);return formatDate(d);}
+  const DAY_NAMES=['niedziela','poniedziałek','wtorek','środa','czwartek','piątek','sobota'];
+
+  function publishedPerformance(format){
+    const all=read(SOCIAL_QUEUE_KEY,[]).filter(x=>String(x.status||'').toLowerCase()==='opublikowany'&&x.date&&(x.likes!=null||x.comments!=null));
+    const same=all.filter(x=>String(x.type||'').toLowerCase()===String(format||'').toLowerCase());
+    return same.length>=2?same:all;
+  }
+
+  function bestPublishingSlot(format='Post',fallbackHour='18:00'){
+    const items=publishedPerformance(format);
+    const dayGroups={},hourGroups={};
+    items.forEach(x=>{
+      const d=new Date(`${x.date}T12:00:00`);if(Number.isNaN(d.getTime()))return;
+      const score=(Number(x.likes)||0)+4*(Number(x.comments)||0);
+      const wd=d.getDay();
+      const dg=dayGroups[wd]||(dayGroups[wd]={day:wd,total:0,count:0});dg.total+=score;dg.count++;
+      const h=Number(String(x.time||'').slice(0,2));
+      if(Number.isFinite(h)&&h>=0&&h<=23){const hg=hourGroups[h]||(hourGroups[h]={hour:h,total:0,count:0});hg.total+=score;hg.count++;}
+    });
+    const bestDay=Object.values(dayGroups).map(x=>({...x,avg:x.total/x.count})).sort((a,b)=>b.avg-a.avg||b.count-a.count)[0]||null;
+    const bestHour=Object.values(hourGroups).map(x=>({...x,avg:x.total/x.count})).sort((a,b)=>b.avg-a.avg||b.count-a.count)[0]||null;
+    const recHour=String(fallbackHour||'18:00').match(/^([01]\d|2[0-3]):[0-5]\d$/)?fallbackHour:'18:00';
+    const time=bestHour?`${String(bestHour.hour).padStart(2,'0')}:00`:recHour;
+    const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+1);
+    if(bestDay){let delta=(bestDay.day-d.getDay()+7)%7;if(delta===0)delta=0;d.setDate(d.getDate()+delta);}
+    return {date:formatDate(d),time,weekday:DAY_NAMES[d.getDay()],sampleSize:items.length,dayEvidence:bestDay?.count||0,hourEvidence:bestHour?.count||0,source:(bestDay||bestHour)?'performance':'fallback'};
   }
 
   function recommendationParts(r){
@@ -153,35 +178,39 @@
   function addRecommendationToCalendar(seed,parts,r){
     const arr=read(SOCIAL_QUEUE_KEY,[]);
     const createdAt=Date.now();
+    const slot=bestPublishingSlot(parts.format,parts.hour);
     arr.unshift({
       id:createdAt,
       sourceId:`performance-radar-${createdAt}`,
       title:`Test Performance Radar — ${parts.topic}`,
       platform:'Instagram',
       type:parts.format,
-      date:nextDate(),
-      time:parts.hour,
+      date:slot.date,
+      time:slot.time,
       status:'Zaplanowany',
-      notes:`Rekomendacja lokalna. ${r?.summary||''}${parts.cta?` CTA: ${parts.cta}.`:''}`,
+      notes:`Rekomendacja lokalna. Termin: ${slot.weekday} ${slot.date}, ${slot.time}. ${r?.summary||''}${parts.cta?` CTA: ${parts.cta}.`:''}`,
       source:'Performance Radar',
       createdAt,
       updatedAt:createdAt
     });
     save(SOCIAL_QUEUE_KEY,arr);
     document.dispatchEvent(new CustomEvent('aii:social-changed',{detail:{count:arr.length,source:'performance-radar'}}));
+    return slot;
   }
 
   function createFromRecommendation(){
     const r=read(RECOMMENDATIONS_KEY,null);
     if(!r){toast('Najpierw odśwież Performance Radar, aby utworzyć rekomendację');return false;}
     const parts=recommendationParts(r);
+    const slot=bestPublishingSlot(parts.format,parts.hour);
     const seed={
       source:'performance-radar',
       niche:'na podstawie danych Performance Radar',
       title:parts.topic,
-      brief:`Format: ${parts.format}. Rekomendowana godzina: ${parts.hour}. ${r.summary||''}${parts.cta?` CTA: ${parts.cta}.`:''}`,
+      brief:`Format: ${parts.format}. Najlepszy termin: ${slot.weekday} ${slot.date}, ${slot.time}. ${r.summary||''}${parts.cta?` CTA: ${parts.cta}.`:''}`,
       type:parts.format,
-      recommendedHour:parts.hour,
+      recommendedHour:slot.time,
+      recommendedDate:slot.date,
       createdAt:Date.now()
     };
     save(SEED_KEY,seed);
@@ -190,8 +219,22 @@
     const nav=document.querySelector(`.nav-item[data-view="${parts.isReels?'reels':'posts'}"]`)||document.querySelector(`.nav-item[data-view="${parts.isReels?'reels-generator':'posts'}"]`);
     if(nav)nav.click();
     [40,140,350,700].forEach(ms=>setTimeout(tryConsume,ms));
-    toast(`Zaplanowano ${parts.format} na ${parts.hour} i otwarto generator`);
+    toast(`Zaplanowano ${parts.format}: ${slot.weekday} ${slot.date} o ${slot.time}`);
     return true;
+  }
+
+  function addGeneratedAtBestSlot(kind){
+    const isReels=kind==='Reels';
+    const title=(isReels?document.getElementById('rpTopic'):document.getElementById('ppTopic'))?.value?.trim()||kind;
+    const text=(isReels?document.getElementById('rpCaption'):document.getElementById('ppOut'))?.textContent?.trim()||'';
+    const r=read(RECOMMENDATIONS_KEY,null),parts=recommendationParts(r||{});
+    const slot=bestPublishingSlot(kind,parts.hour||'18:00');
+    const arr=read(SOCIAL_QUEUE_KEY,[]),now=Date.now();
+    arr.unshift({id:now,sourceId:`best-slot-${kind.toLowerCase()}-${now}`,title,platform:'Instagram',type:kind,date:slot.date,time:slot.time,status:'Zaplanowany',notes:`Automatycznie wybrany najlepszy termin: ${slot.weekday} ${slot.date}, ${slot.time}. ${text}`,source:'Best Publishing Slot',createdAt:now,updatedAt:now});
+    save(SOCIAL_QUEUE_KEY,arr);
+    document.dispatchEvent(new CustomEvent('aii:social-changed',{detail:{count:arr.length,source:'best-slot'}}));
+    toast(`Dodano do kalendarza: ${slot.weekday} ${slot.date} o ${slot.time}`);
+    return slot;
   }
 
   function enhanceRecommendationButton(){
@@ -202,6 +245,17 @@
     actions.innerHTML='<button type="button" class="primary" id="performanceCreateContent">＋ Utwórz treść z tej rekomendacji</button>';
     summary.insertAdjacentElement('afterend',actions);
     document.getElementById('performanceCreateContent')?.addEventListener('click',createFromRecommendation);
+  }
+
+  function enhanceBestSlotButtons(){
+    const postActions=document.querySelector('.post-pro-actions');
+    if(postActions&&!document.getElementById('postBestSlotBtn')){
+      const b=document.createElement('button');b.type='button';b.className='ghost';b.id='postBestSlotBtn';b.textContent='◷ Zaplanuj najlepszy termin';b.addEventListener('click',()=>addGeneratedAtBestSlot('Post'));postActions.appendChild(b);
+    }
+    const reelsActions=[...document.querySelectorAll('.rp-actions')].pop();
+    if(reelsActions&&!document.getElementById('reelsBestSlotBtn')){
+      const b=document.createElement('button');b.type='button';b.className='ghost';b.id='reelsBestSlotBtn';b.textContent='◷ Zaplanuj najlepszy termin';b.addEventListener('click',()=>addGeneratedAtBestSlot('Reels'));reelsActions.appendChild(b);
+    }
   }
 
   function tryConsume(){
@@ -219,6 +273,7 @@
     tryConsumeImage();
     enhanceImageButtons();
     enhanceRecommendationButton();
+    enhanceBestSlotButtons();
   }
 
   document.addEventListener('DOMContentLoaded',()=>{
@@ -228,5 +283,5 @@
   });
   document.addEventListener('click',()=>setTimeout(refresh,40));
   document.addEventListener('aii:social-changed',()=>setTimeout(refresh,50));
-  window.AIIContentSeedHandoff={tryConsume,tryConsumeImage,makePackage,openImage,fillImage,createFromRecommendation};
+  window.AIIContentSeedHandoff={tryConsume,tryConsumeImage,makePackage,openImage,fillImage,createFromRecommendation,bestPublishingSlot,addGeneratedAtBestSlot};
 })();
