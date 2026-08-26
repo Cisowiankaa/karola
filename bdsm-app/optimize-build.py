@@ -101,3 +101,4 @@ block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
 print('Optimized BDSM index: runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + day agenda + agenda cloud sync + daily reports + hourly reports + safety')
+# build trigger: dedicated daily reports view
