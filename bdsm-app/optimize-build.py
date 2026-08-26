@@ -38,6 +38,7 @@ for start, end in [
         text = text[:a] + text[b:]
 
 sync = (root / 'sync-fix-v3.js').read_text(encoding='utf-8')
+sync_queue_guard = (root / 'sync-queue-guard.js').read_text(encoding='utf-8')
 history = (root / 'invite-status-central.js').read_text(encoding='utf-8')
 email_panel = (root / 'email-panel-force-open.js').read_text(encoding='utf-8')
 offences = (root / 'offences-module.js').read_text(encoding='utf-8')
@@ -94,11 +95,11 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-mods = [sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, case_controls, today_dashboard, weekly_plan, month_calendar, day_agenda, agenda_cloud, daily_reports, hourly_reports]
+mods = [sync_queue_guard, sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, case_controls, today_dashboard, weekly_plan, month_calendar, day_agenda, agenda_cloud, daily_reports, hourly_reports]
 runtime = '<!-- BDSM_RUNTIME_INLINE_START -->\n' + ''.join(f'<script>\n{x}\n</script>\n' for x in mods) + '<!-- BDSM_RUNTIME_INLINE_END -->'
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + day agenda + agenda cloud sync + daily reports + hourly reports + safety')
-# build trigger: dedicated daily reports view
+print('Optimized BDSM index: sync queue guard + runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + day agenda + agenda cloud sync + daily reports + hourly reports + safety')
+# build trigger: sync queue guard
