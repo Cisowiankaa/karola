@@ -3,13 +3,32 @@ const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v26.0';
 const FB_GRAPH = `https://graph.facebook.com/${GRAPH_VERSION}`;
 const IG_GRAPH = `https://graph.instagram.com/${GRAPH_VERSION}`;
 
-function cors(res) {
+function allowedOrigin(origin) {
+  if (!origin) return 'https://ai-influencer-studio-api.vercel.app';
+  if (origin === 'https://ai-influencer-studio-api.vercel.app') return origin;
+  if (origin === 'https://cisowiankaa.github.io') return origin;
+  if (/^https:\/\/[-a-z0-9]+\.vercel\.app$/i.test(origin)) return origin;
+  return 'https://ai-influencer-studio-api.vercel.app';
+}
+
+function cors(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', allowedOrigin(req.headers.origin));
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Meta-Ig-User-Id, X-Instagram-Username');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Cache-Control', 'public, max-age=0, must-revalidate');
-  res.setHeader('Vercel-CDN-Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  res.setHeader('Cache-Control', 'private, max-age=0, must-revalidate');
+}
+
+function parseCookies(req) {
+  return String(req.headers.cookie || '').split(';').reduce((acc, part) => {
+    const i = part.indexOf('=');
+    if (i < 0) return acc;
+    const key = part.slice(0, i).trim();
+    const value = part.slice(i + 1).trim();
+    try { acc[key] = decodeURIComponent(value); } catch { acc[key] = value; }
+    return acc;
+  }, {});
 }
 
 function normalizeToken(value) {
@@ -97,15 +116,17 @@ async function apifyInstagram(username) {
 }
 
 module.exports = async function handler(req, res) {
-  cors(res);
+  cors(req, res);
   if (req.method === 'OPTIONS') return res.status(204).end();
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method not allowed' });
 
+  const cookie = parseCookies(req);
   const headerToken = normalizeToken(req.headers.authorization || '');
+  const sessionToken = normalizeToken(cookie.aii_meta_token || '');
   const legacyToken = normalizeToken(process.env.META_ACCESS_TOKEN);
-  const igToken = headerToken || normalizeToken(process.env.META_IG_ACCESS_TOKEN) || legacyToken;
-  const fbToken = normalizeToken(process.env.META_FB_ACCESS_TOKEN) || (!headerToken ? legacyToken : '');
-  const igUserId = String(req.headers['x-meta-ig-user-id'] || process.env.META_IG_USER_ID || '').trim();
+  const igToken = headerToken || sessionToken || normalizeToken(process.env.META_IG_ACCESS_TOKEN) || legacyToken;
+  const fbToken = normalizeToken(process.env.META_FB_ACCESS_TOKEN) || (!headerToken && !sessionToken ? legacyToken : '');
+  const igUserId = String(req.headers['x-meta-ig-user-id'] || cookie.aii_meta_ig_user_id || process.env.META_IG_USER_ID || '').trim();
   const pageId = String(process.env.META_PAGE_ID || '').trim();
   const instagramUsername = normalizeUsername(
     req.query?.instagram || req.headers['x-instagram-username'] || process.env.META_IG_USERNAME || process.env.INSTAGRAM_USERNAME || process.env.META_IG_HANDLE
@@ -116,14 +137,13 @@ module.exports = async function handler(req, res) {
   const metrics = {};
   const sources = { instagram: [], facebook: [] };
 
-  // Instagram via Meta — isolated from Facebook failures.
   if (igUserId && igToken) {
     try {
       const ig = await graph(IG_GRAPH, `${igUserId}?fields=id,user_id,username,name,profile_picture_url,followers_count,media_count`, igToken);
       const resolvedUsername = ig.username || instagramUsername;
       profiles.push({ platform: 'Instagram', handle: resolvedUsername ? `@${resolvedUsername}` : '', active: true, connected: true, connectionMode: 'live', source: 'Meta', externalId: ig.id || ig.user_id, followers: ig.followers_count || 0, mediaCount: ig.media_count || 0, avatar: ig.profile_picture_url || '' });
       metrics.instagram = { followers: ig.followers_count || 0, mediaCount: ig.media_count || 0, source: 'Meta' };
-      sources.instagram.push({ provider: 'Meta', ok: true });
+      sources.instagram.push({ provider: 'Meta', ok: true, auth: sessionToken ? 'oauth-session' : headerToken ? 'browser-token' : 'server-token' });
 
       const media = await graph(IG_GRAPH, `${igUserId}/media?fields=id,caption,media_type,media_product_type,permalink,timestamp,like_count,comments_count&limit=25`, igToken);
       for (const m of media.data || []) {
@@ -137,7 +157,6 @@ module.exports = async function handler(req, res) {
     sources.instagram.push({ provider: 'Meta', ok: false, code: 'NOT_CONFIGURED', message: !igUserId ? 'META_IG_USER_ID missing' : 'Instagram access token missing' });
   }
 
-  // Instagram fallback via Apify only if Meta Instagram did not succeed.
   if (!sources.instagram.some(x => x.ok)) {
     const fallback = await apifyInstagram(instagramUsername);
     sources.instagram.push({ provider: fallback.provider, ok: fallback.ok, code: fallback.code || null, message: fallback.message || null });
@@ -147,7 +166,6 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // Facebook via Meta — isolated from Instagram failures.
   if (pageId && fbToken) {
     try {
       const page = await graph(FB_GRAPH, `${pageId}?fields=id,name,username,picture{url},followers_count,fan_count`, fbToken);
@@ -174,7 +192,6 @@ module.exports = async function handler(req, res) {
   const anyLive = instagramLive || facebookLive;
   const metaReauth = [...sources.instagram, ...sources.facebook].some(x => x.provider === 'Meta' && x.code === 'REAUTH_REQUIRED');
 
-  // Always return a usable payload. Frontend keeps cached/local data when arrays are empty.
   if (!anyLive) {
     return res.status(200).json({
       ok: true,
@@ -191,7 +208,8 @@ module.exports = async function handler(req, res) {
       items: [],
       metrics: {},
       sources,
-      fallback: 'local-cache'
+      fallback: 'local-cache',
+      authSession: Boolean(sessionToken)
     });
   }
 
@@ -208,6 +226,7 @@ module.exports = async function handler(req, res) {
     metrics,
     sources,
     sessionToken: Boolean(headerToken),
+    authSession: Boolean(sessionToken),
     fallback: metrics.instagram?.source === 'Apify' ? 'apify' : null
   });
 };
