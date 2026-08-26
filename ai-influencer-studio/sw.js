@@ -1,5 +1,5 @@
-const CACHE='aii-shell-v20260827-3';
-const FALLBACK=['./','./index.html','./styles.css','./app.js','./runtime-status.js','./offline-runtime.js','./avatar-preview.svg'];
+const CACHE='aii-shell-v20260827-4';
+const FALLBACK=['./','./index.html','./styles.css','./app.js','./runtime-status.js','./offline-runtime.js','./pwa-runtime.js','./manifest.webmanifest','./avatar-preview.svg'];
 
 function localAsset(url){
   try{const u=new URL(url,self.location.href);return u.origin===self.location.origin&&!u.pathname.includes('/api/')?u.href:null}catch{return null}
