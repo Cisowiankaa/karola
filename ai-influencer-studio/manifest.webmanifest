@@ -1,0 +1,10 @@
+{
+  "name": "AI Influencer Studio",
+  "short_name": "Influencer Studio",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f6fb",
+  "theme_color": "#171925",
+  "description": "Creator operating system z lokalnym trybem pracy i synchronizacją po odzyskaniu internetu."
+}
