@@ -6,7 +6,7 @@
   const BACKUP='aii-cloud-sync-last-backup';
   const CLOUD_API='/api/cloud-sync';
   const BLOCK=/(token|secret|password|api[-_]?key|access[-_]?token|endpoint|webhook|authorization)/i;
-  const SKIP=new Set([KEY,CLOUD,PENDING,BACKUP,'aii-mode','aii-runtime-status']);
+  const SKIP=new Set([KEY,CLOUD,PENDING,BACKUP,'aii-mode','aii-runtime-status','aii-device-id']);
   let baseline='';
   let pushTimer=null;
 
@@ -32,7 +32,7 @@
     return (h>>>0).toString(16);
   }
   function snapshot(){return {version:1,updatedAt:new Date().toISOString(),deviceId:deviceId(),data:safeData()}}
-  function deviceId(){let id=localStorage.getItem('aii-device-id');if(!id){id=(crypto?.randomUUID?.()||`device-${Date.now()}-${Math.random().toString(36).slice(2)}`);localStorage.setItem('aii-device-id',id)}return id}
+  function deviceId(){let id=localStorage.getItem('aii-device-id');if(!id){id=(globalThis.crypto?.randomUUID?.()||`device-${Date.now()}-${Math.random().toString(36).slice(2)}`);localStorage.setItem('aii-device-id',id)}return id}
   function localDataCount(){return Object.keys(safeData()).length}
   function pending(){return readJson(PENDING,null)}
   function queueSnapshot(s=snapshot()){saveJson(PENDING,s);setCloud({pending:true,pendingAt:s.updatedAt});return s}
@@ -48,10 +48,10 @@
   }
 
   async function cloudStatus(){
-    if(!navigator.onLine){setCloud({configured:false,available:false,mode:'offline'});return cloudState()}
+    if(!navigator.onLine){setCloud({available:false,mode:'offline'});return cloudState()}
     try{
       const data=await postCloud({action:'status'});
-      const st=setCloud({configured:Boolean(data.configured),available:true,provider:data.provider||'local-only',mode:data.configured?'cloud':'local-only'});
+      const st=setCloud({configured:Boolean(data.configured),available:true,provider:data.provider||'local-only',mode:data.configured?'cloud':'local-only',lastError:data.configured?null:'CLOUD_SYNC_NOT_CONFIGURED'});
       if(st.configured){if(pending())await push({silent:true});else if(localDataCount()===0)await pull({auto:true,silent:true})}
       return st;
     }catch(error){setCloud({configured:false,available:false,mode:'local-only',lastError:String(error?.code||error?.message||error)});return cloudState()}
@@ -67,8 +67,9 @@
       if(!silent)toast?.('Cloud Sync: dane wysłane');
       return true;
     }catch(error){
-      setCloud({pending:true,mode:'local-only',lastError:String(error?.code||error?.message||error)});
-      if(!silent)toast?.(error?.code==='CLOUD_SYNC_NOT_CONFIGURED'?'Cloud Sync czeka na konfigurację backendu':'Cloud Sync niedostępny — dane zostały lokalnie');
+      const notConfigured=error?.code==='CLOUD_SYNC_NOT_CONFIGURED';
+      setCloud({configured:notConfigured?false:cloudState().configured,available:notConfigured?true:cloudState().available,pending:true,mode:'local-only',lastError:String(error?.code||error?.message||error)});
+      if(!silent)toast?.(notConfigured?'Cloud Sync czeka na konfigurację backendu':'Cloud Sync niedostępny — dane zostały lokalnie');
       return false;
     }
   }
@@ -84,8 +85,10 @@
   }
   function applyRemote(remote){
     const current=snapshot();saveJson(BACKUP,current);
+    const existing=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(allowedKey(k))existing.push(k)}
+    existing.forEach(k=>{if(!Object.prototype.hasOwnProperty.call(remote.data,k))localStorage.removeItem(k)});
     Object.entries(remote.data).forEach(([k,v])=>{if(allowedKey(k)&&typeof v==='string')localStorage.setItem(k,v)});
-    baseline=fingerprint();
+    baseline=fingerprint();localStorage.removeItem(PENDING);
     setCloud({configured:true,available:true,mode:'cloud',pending:false,lastPull:new Date().toISOString(),lastAppliedAt:remote.updatedAt||new Date().toISOString(),lastError:null,lastFingerprint:baseline});
     document.dispatchEvent(new CustomEvent('aii:cloud-sync-applied',{detail:{updatedAt:remote.updatedAt||null}}));
     if(typeof window.AII_refreshDashboard==='function')window.AII_refreshDashboard();
@@ -139,7 +142,7 @@
   window.addEventListener('online',syncBack);window.addEventListener('offline',goOffline);
   document.addEventListener('DOMContentLoaded',()=>{
     register();writeState();baseline=fingerprint();cloudStatus();
-    const root=document.getElementById('content');if(root)new MutationObserver(()=>setTimeout(renderCloudCard,20)).observe(root,{childList:true,subtree:true});
+    const root=document.getElementById('content');if(root)new MutationObserver(()=>setTimeout(renderCloudCard,20)).observe(root,{childList:true});
     document.querySelectorAll('.nav-item[data-view="settings"]').forEach(a=>a.addEventListener('click',()=>setTimeout(renderCloudCard,60)));
     setInterval(markDirty,45000);setTimeout(renderCloudCard,500);
   });
