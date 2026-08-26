@@ -2,24 +2,34 @@
   const ENDPOINT_KEY='aii-social-sync-endpoint';
   const DEFAULT_ENDPOINT='https://ai-influencer-studio-api.vercel.app/api/social-sync';
   const AUTH_START='https://ai-influencer-studio-api.vercel.app/api/meta-auth-start';
+  const AUTH_STATUS='https://ai-influencer-studio-api.vercel.app/api/meta-auth-status';
   const q=(s,r=document)=>r.querySelector(s);
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
   const toast=t=>window.showToast?window.showToast(t):alert(t);
+  let authReady=null;
+
+  async function loadAuthStatus(){
+    try{
+      const r=await fetch(AUTH_STATUS,{headers:{Accept:'application/json'},credentials:'include',cache:'no-store'});
+      const data=await r.json().catch(()=>({}));
+      authReady=Boolean(r.ok&&data.ready);
+      return data;
+    }catch{
+      authReady=false;
+      return {ready:false};
+    }
+  }
 
   function acceptCallback(){
     const u=new URL(location.href);
     if(u.searchParams.get('meta_connected')!=='1')return;
-
-    // Remove legacy client-side Meta credentials. OAuth session now lives only in HttpOnly cookies.
     localStorage.removeItem('aii-meta-access-token');
     localStorage.removeItem('aii-meta-ig-user-id');
     localStorage.setItem(ENDPOINT_KEY,DEFAULT_ENDPOINT);
     save('aii-social-sync-meta',{status:'idle',lastSync:null,message:'Meta połączone ponownie — sprawdzanie danych LIVE'});
-
     u.searchParams.delete('meta_connected');
     history.replaceState(null,'',u.pathname+(u.searchParams.toString()?`?${u.searchParams}`:'')+u.hash);
-
     setTimeout(()=>{
       toast('Meta połączone ponownie');
       document.querySelector('.nav-item[data-view="social"]')?.click();
@@ -27,17 +37,40 @@
     },120);
   }
 
-  function injectButton(){
+  async function connect(){
+    if(authReady!==true){
+      const status=await loadAuthStatus();
+      if(!status.ready){
+        toast('OAuth Meta nie jest jeszcze gotowy — brakuje META_APP_SECRET na Vercel');
+        return false;
+      }
+    }
+    location.href=AUTH_START;
+    return true;
+  }
+
+  async function injectButton(){
     const panel=q('.social-sync-panel');
     if(!panel||q('#metaReauthBtn'))return;
     const b=document.createElement('button');
     b.id='metaReauthBtn';
     b.className='primary';
     b.type='button';
-    b.textContent='Połącz ponownie Meta';
-    b.title='Otwórz bezpieczną autoryzację Instagram/Meta';
-    b.onclick=()=>{location.href=AUTH_START};
+    b.textContent='Sprawdzam Meta…';
+    b.disabled=true;
+    b.title='Bezpieczne ponowne połączenie Instagram/Meta';
+    b.onclick=()=>connect();
     panel.appendChild(b);
+
+    const status=await loadAuthStatus();
+    b.disabled=false;
+    if(status.ready){
+      b.textContent='Połącz ponownie Meta';
+      b.title='OAuth Meta gotowy';
+    }else{
+      b.textContent='Meta: dokończ konfigurację';
+      b.title='Brakuje META_APP_SECRET na Vercel';
+    }
   }
 
   function endpointWithContext(){
@@ -57,21 +90,12 @@
       const r=await fetch(endpointWithContext(),{headers:{Accept:'application/json'},credentials:'include'});
       const data=await r.json().catch(()=>({}));
       if(!r.ok||data?.ok===false)throw new Error(data.message||data.error||`HTTP ${r.status}`);
-
       if(data.degraded){
-        save('aii-social-sync-meta',{
-          status:'degraded',
-          lastSync:null,
-          lastAttempt:Date.now(),
-          message:data.message||'Meta nadal wymaga autoryzacji — używane są dane lokalne.',
-          errorCode:data.code||'SOCIAL_DEGRADED',
-          fallback:data.fallback||'local-cache'
-        });
+        save('aii-social-sync-meta',{status:'degraded',lastSync:null,lastAttempt:Date.now(),message:data.message||'Meta nadal wymaga autoryzacji — używane są dane lokalne.',errorCode:data.code||'SOCIAL_DEGRADED',fallback:data.fallback||'local-cache'});
         toast('Meta nie zwróciło jeszcze danych LIVE — aplikacja działa lokalnie');
         document.querySelector('.nav-item[data-view="social"]')?.click();
         return false;
       }
-
       if(Array.isArray(data.items)&&data.items.length){
         const existing=read('aii-social-queue',[]),map=new Map(existing.map(x=>[String(x.externalId||x.id),x]));
         data.items.forEach(x=>map.set(String(x.externalId||x.id),{...map.get(String(x.externalId||x.id)),...x}));
@@ -96,5 +120,5 @@
     setTimeout(injectButton,200);
   });
 
-  window.AIIMetaReauth={sync:syncSession,connect:()=>{location.href=AUTH_START}};
+  window.AIIMetaReauth={sync:syncSession,connect,check:loadAuthStatus};
 })();
