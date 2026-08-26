@@ -34,7 +34,9 @@ module.exports=async function(req,res){
     profiles.push({platform:'Facebook',handle:p.username?`@${p.username}`:(p.name||''),active:true,connected:true,source:'Meta',externalId:p.id,followers:p.followers_count||p.fan_count||0,avatar:p.picture?.data?.url||''});metrics.facebook={followers:p.followers_count||p.fan_count||0,source:'Meta'};sources.facebook.push({provider:'Meta',ok:true});
   }catch(e){sources.facebook.push(srcErr(e))}}else sources.facebook.push({provider:'Meta',ok:false,code:'NOT_CONFIGURED',message:'Facebook page connection missing'});
 
-  items.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));const live=sources.instagram.some(x=>x.ok)||sources.facebook.some(x=>x.ok);const reauth=[...sources.instagram,...sources.facebook].some(x=>x.code==='REAUTH_REQUIRED');
-  if(!live)return res.status(200).json({ok:true,degraded:true,connected:false,service:'resilient-social-sync',provider:'local-cache',code:reauth?'META_REAUTH_REQUIRED':'SOCIAL_DEGRADED',message:reauth?'Meta wymaga ponownej autoryzacji.':'Źródła LIVE są obecnie niedostępne.',syncedAt:new Date().toISOString(),profiles:[],items:[],metrics:{},sources,fallback:'local-cache'});
-  return res.status(200).json({ok:true,degraded:!(sources.instagram.some(x=>x.ok)&&sources.facebook.some(x=>x.ok)),connected:true,service:'resilient-social-sync',provider:'Meta Graph API',graphVersion:V,syncedAt:new Date().toISOString(),profiles,items,metrics,sources,authSession:Boolean(session)});
+  items.sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+  const instagramLive=sources.instagram.some(x=>x.ok),facebookLive=sources.facebook.some(x=>x.ok),live=instagramLive||facebookLive;
+  const reauth=[...sources.instagram,...sources.facebook].some(x=>x.code==='REAUTH_REQUIRED');
+  if(!live)return res.status(200).json({ok:true,degraded:true,partial:false,connected:false,service:'resilient-social-sync',provider:'local-cache',code:reauth?'META_REAUTH_REQUIRED':'SOCIAL_DEGRADED',message:reauth?'Meta wymaga ponownej autoryzacji.':'Źródła LIVE są obecnie niedostępne.',syncedAt:new Date().toISOString(),profiles:[],items:[],metrics:{},sources,fallback:'local-cache'});
+  return res.status(200).json({ok:true,degraded:false,partial:!(instagramLive&&facebookLive),connected:true,service:'resilient-social-sync',provider:'Meta Graph API',graphVersion:V,syncedAt:new Date().toISOString(),profiles,items,metrics,sources,authSession:Boolean(session)});
 };
