@@ -20,6 +20,7 @@ on:
       - 'bdsm-app/weekly-plan-module.js'
       - 'bdsm-app/month-calendar-module.js'
       - 'bdsm-app/day-agenda-module.js'
+      - 'bdsm-app/agenda-cloud-sync-module.js'
       - 'bdsm-app/hourly-reports-module.js'
 permissions:
   contents: write
@@ -41,4 +42,3 @@ jobs:
           git add bdsm-app/index.html
           git commit -m 'Optimize BDSM frontend runtime'
           git push
-# checklist priority build trigger 2026-08-25
