@@ -97,11 +97,11 @@ module.exports = async function handler(req, res) {
       return res.redirect(302,target.toString());
     }
 
-    const legacyId = String(process.env.META_APP_ID || '2272021750228175').trim();
+    const legacyId = String(process.env.META_APP_ID || '').trim();
     const legacySecret = String(process.env.META_APP_SECRET || '').trim();
     const appId = String(process.env.META_FACEBOOK_APP_ID || legacyId).trim();
     const appSecret = String(process.env.META_FACEBOOK_APP_SECRET || legacySecret).trim();
-    if (!appId || !appSecret) return res.status(503).send('Brak META_APP_SECRET lub META_FACEBOOK_APP_SECRET w Vercel.');
+    if (!appId || !appSecret) return res.status(503).send('Brak META_FACEBOOK_APP_ID i META_FACEBOOK_APP_SECRET (lub jawnie META_APP_ID i META_APP_SECRET jako legacy Facebook App) w Vercel.');
 
     const tokenUrl = new URL(`https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token`);
     tokenUrl.searchParams.set('client_id', appId);
