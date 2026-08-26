@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const APP_ID = process.env.META_APP_ID || '2272021750228175';
+const GRAPH_VERSION = process.env.META_GRAPH_VERSION || 'v26.0';
 
 module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).send('Method not allowed');
@@ -13,13 +14,11 @@ module.exports = async function handler(req, res) {
     client_id: APP_ID,
     redirect_uri: redirectUri,
     response_type: 'code',
-    scope: 'instagram_business_basic',
-    state,
-    force_authentication: '1',
-    enable_fb_login: '0'
+    scope: 'pages_show_list,pages_read_engagement,instagram_basic',
+    state
   });
 
   res.setHeader('Cache-Control', 'no-store');
   res.setHeader('Set-Cookie', `aii_meta_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`);
-  return res.redirect(302, `https://www.instagram.com/oauth/authorize?${params.toString()}`);
+  return res.redirect(302, `https://www.facebook.com/${GRAPH_VERSION}/dialog/oauth?${params.toString()}`);
 };
