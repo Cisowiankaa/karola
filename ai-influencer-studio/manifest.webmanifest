@@ -1,10 +1,25 @@
 {
   "name": "AI Influencer Studio",
   "short_name": "Influencer Studio",
+  "description": "Creator operating system z lokalnym trybem pracy, planowaniem treści, statystykami i synchronizacją po odzyskaniu internetu.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "background_color": "#f5f6fb",
   "theme_color": "#171925",
-  "description": "Creator operating system z lokalnym trybem pracy i synchronizacją po odzyskaniu internetu."
+  "lang": "pl-PL",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "./avatar-preview.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {"name":"Dashboard","short_name":"Dashboard","url":"./#dashboard"},
+    {"name":"Kalendarz publikacji","short_name":"Kalendarz","url":"./#calendar"},
+    {"name":"Statystyki","short_name":"Statystyki","url":"./#stats"}
+  ]
 }
