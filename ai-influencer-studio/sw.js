@@ -1,6 +1,45 @@
-const CACHE='aii-shell-v20260827-2';
-const CORE=['./','./index.html','./styles.css','./app.js','./persistence.js','./projects.js','./project-sync.js','./reminders.js','./tasks.js','./notifications.js','./generators.js','./creator-suite.js','./creator-blueprint.js','./monetization-lab.js','./niche-classifier.js','./niche-regenerator.js','./niche-filter-fix.js','./niche-history.js','./niche-comparator.js','./niche-content-plan.js','./niche-month-planner.js','./reels-studio.js','./post-studio.js','./content-seed-handoff.js','./content-calendar-handoff.js','./campaign-studio.js','./collabs-studio.js','./messages-studio.js','./social-studio.js','./social-performance.js','./social-local-planner.js','./social-local-copywriter.js','./content-score.js','./local-app-completion.js','./local-core-views.js','./app-finalization.js','./app-finalizer.js','./local-media-tools.js','./offline-runtime.js','./calendar-studio.js','./messages-router-fix.js','./avatar-status-fix.js','./voice-runtime-fix.js','./dashboard-live.js','./runtime-status.js','./stats-runtime-fix.js','./stats-trends.js'];
-self.addEventListener('install',e=>{e.waitUntil(caches.open(CACHE).then(async c=>{await Promise.allSettled(CORE.map(u=>c.add(u)));}).then(()=>self.skipWaiting()))});
-self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&k.startsWith('aii-shell-')).map(k=>caches.delete(k)))).then(()=>self.clients.claim()))});
-self.addEventListener('fetch',e=>{const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);if(u.origin!==self.location.origin)return;if(u.pathname.includes('/api/')){e.respondWith(fetch(r).catch(()=>new Response(JSON.stringify({ok:false,offline:true}),{status:503,headers:{'Content-Type':'application/json'}})));return;}if(r.mode==='navigate'){e.respondWith(fetch(r).then(res=>{const copy=res.clone();caches.open(CACHE).then(c=>c.put('./index.html',copy));return res}).catch(async()=>await caches.match('./index.html')||await caches.match('./')));return;}e.respondWith(caches.match(r).then(cached=>cached||fetch(r).then(res=>{if(res&&res.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(r,copy));}return res}).catch(()=>cached)));});
+const CACHE='aii-shell-v20260827-3';
+const FALLBACK=['./','./index.html','./styles.css','./app.js','./runtime-status.js','./offline-runtime.js','./avatar-preview.svg'];
+
+function localAsset(url){
+  try{const u=new URL(url,self.location.href);return u.origin===self.location.origin&&!u.pathname.includes('/api/')?u.href:null}catch{return null}
+}
+
+async function discoverAssets(){
+  const assets=new Set(FALLBACK.map(x=>new URL(x,self.location.href).href));
+  try{
+    const res=await fetch(new Request('./index.html',{cache:'no-store'}));
+    if(res.ok){
+      const html=await res.clone().text();
+      const re=/<(?:script|link)\b[^>]*(?:src|href)=["']([^"']+)["'][^>]*>/gi;
+      for(const m of html.matchAll(re)){const u=localAsset(m[1]);if(u)assets.add(u)}
+      const cache=await caches.open(CACHE);await cache.put(new URL('./index.html',self.location.href).href,res.clone());
+    }
+  }catch{}
+  return [...assets];
+}
+
+self.addEventListener('install',e=>{
+  e.waitUntil((async()=>{
+    const cache=await caches.open(CACHE);const assets=await discoverAssets();
+    await Promise.allSettled(assets.map(async url=>{try{const r=await fetch(new Request(url,{cache:'reload'}));if(r.ok)await cache.put(url,r)}catch{}}));
+    await self.skipWaiting();
+  })());
+});
+
+self.addEventListener('activate',e=>{
+  e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE&&k.startsWith('aii-shell-')).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+});
+
+self.addEventListener('fetch',e=>{
+  const r=e.request;if(r.method!=='GET')return;const u=new URL(r.url);if(u.origin!==self.location.origin)return;
+  if(u.pathname.includes('/api/')){
+    e.respondWith(fetch(r).catch(()=>new Response(JSON.stringify({ok:false,offline:true,code:'OFFLINE'}),{status:503,headers:{'Content-Type':'application/json','Cache-Control':'no-store'}})));return;
+  }
+  if(r.mode==='navigate'){
+    e.respondWith(fetch(r).then(res=>{if(res?.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(new URL('./index.html',self.location.href).href,copy))}return res}).catch(async()=>await caches.match(new URL('./index.html',self.location.href).href)||await caches.match(new URL('./',self.location.href).href)));return;
+  }
+  e.respondWith(caches.match(r).then(cached=>cached||fetch(r).then(res=>{if(res?.ok){const copy=res.clone();caches.open(CACHE).then(c=>c.put(r,copy))}return res}).catch(()=>cached)));
+});
+
 self.addEventListener('message',e=>{if(e.data==='SKIP_WAITING')self.skipWaiting()});
