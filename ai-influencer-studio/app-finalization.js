@@ -1,0 +1,124 @@
+(() => {
+  const q=(s,r=document)=>r.querySelector(s);
+  const qa=(s,r=document)=>[...r.querySelectorAll(s)];
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+  const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));
+  const num=v=>Number.isFinite(Number(v))?Number(v):0;
+  const money=v=>new Intl.NumberFormat('pl-PL',{style:'currency',currency:'PLN'}).format(num(v));
+  const fmt=v=>new Intl.NumberFormat('pl-PL',{maximumFractionDigits:1}).format(num(v));
+  const toast=t=>window.showToast?window.showToast(t):alert(t);
+  const TODAY=()=>new Date().toISOString().slice(0,10);
+  const QUEUE='aii-social-queue',PROFILES='aii-social-profiles',HISTORY='aii-social-growth-history';
+  const REVENUE='aii-revenue-items',EXPENSES='aii-expense-items',INVOICES='aii-invoices';
+  const AUDIENCE='aii-audience-segments',DIAG='aii-final-diagnostics';
+  const PAGES=new Set(['reports','audience','revenue','expenses','invoices','settings','support']);
+
+  const style=document.createElement('style');
+  style.textContent=`
+    .final-suite{display:grid;gap:14px}.final-card{background:#fff;border:1px solid #e7e9f1;border-radius:16px;padding:15px}.final-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}.final-actions{display:flex;gap:7px;flex-wrap:wrap}.final-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.final-kpi{padding:11px;border:1px solid #eceef5;border-radius:11px;background:#fafafe}.final-kpi span{display:block;font-size:7px;color:#777f8d}.final-kpi strong{display:block;font-size:16px;margin-top:4px}.final-form{display:grid;grid-template-columns:1.2fr 1.5fr 1fr 1fr auto;gap:8px;align-items:end;margin-top:10px}.final-form.invoice{grid-template-columns:1fr 1fr 1.3fr 1.2fr 1fr 1fr auto}.final-form label{display:grid;gap:5px;font-size:7.5px;font-weight:800;color:#717887}.final-form input,.final-form select,.final-form textarea{width:100%;box-sizing:border-box;border:1px solid #dfe2eb;border-radius:9px;padding:8px;background:#fbfbfd;font:inherit}.final-table-wrap{overflow:auto;margin-top:10px}.final-table{width:100%;border-collapse:collapse;font-size:7.5px}.final-table th,.final-table td{padding:8px;border-bottom:1px solid #eceef5;text-align:left;vertical-align:top}.final-table th{color:#717887}.final-empty{padding:18px;text-align:center;color:#7b8290;font-size:8px}.final-badge{display:inline-flex;padding:4px 7px;border-radius:999px;background:#edf8f1;color:#287a4b;font-size:6.8px;font-weight:900}.final-badge.warn{background:#fff5e6;color:#956317}.final-badge.off{background:#f3f4f7;color:#6f7682}.final-pref{display:grid;gap:8px;margin-top:10px}.final-pref-row{display:grid;grid-template-columns:110px 1fr auto;gap:8px;align-items:center;font-size:7.5px}.final-meter{height:8px;background:#eceef5;border-radius:999px;overflow:hidden}.final-meter i{display:block;height:100%;background:linear-gradient(90deg,#55d9e9,#8067ee)}.final-segment{display:grid;grid-template-columns:1fr 2fr auto;gap:8px;align-items:center;padding:9px;border:1px solid #eceef5;border-radius:10px;background:#fafafe;margin-top:7px;font-size:8px}.final-diag-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.final-diag{padding:11px;border:1px solid #eceef5;border-radius:11px;background:#fafafe}.final-diag b{display:block;font-size:9px}.final-diag span{display:block;font-size:7px;color:#777f8d;margin-top:3px}.final-note{font-size:7.5px;color:#747b88;line-height:1.5;margin-top:9px}.final-support{white-space:pre-wrap;font:7.5px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;background:#111827;color:#eef2ff;border-radius:12px;padding:12px;max-height:320px;overflow:auto}.final-textarea{width:100%;min-height:95px;box-sizing:border-box;border:1px solid #dfe2eb;border-radius:10px;padding:10px;background:#fbfbfd;font:inherit}.final-profit.pos{color:#287a4b}.final-profit.neg{color:#a13f3f}@media(max-width:1050px){.final-grid,.final-diag-grid{grid-template-columns:1fr 1fr}.final-form,.final-form.invoice{grid-template-columns:1fr 1fr}}@media(max-width:620px){.final-grid,.final-diag-grid,.final-form,.final-form.invoice,.final-segment{grid-template-columns:1fr}.final-pref-row{grid-template-columns:85px 1fr auto}}
+  `;
+  document.head.appendChild(style);
+
+  function setHead(title,sub){const a=q('#pageTitle'),b=q('#pageSubtitle');if(a)a.textContent=title;if(b)b.textContent=sub}
+  function mode(){if(!navigator.onLine)return 'OFFLINE';const t=q('#systemStatus')?.textContent||'';return /bez AI/i.test(t)?'ONLINE bez AI':/OFFLINE/i.test(t)?'OFFLINE':'ONLINE + AI'}
+  function published(){return (read(QUEUE,[])||[]).filter(x=>String(x.status||'').toLowerCase()==='opublikowany')}
+  function score(x){return num(x.likes)+num(x.comments)*4}
+  function typeOf(x){const t=String(x.type||x.media_type||'Post');return /reel|video/i.test(t)?'Reels':/carousel/i.test(t)?'Carousel':'Post'}
+  function dated(days,offset=0){const end=new Date();end.setHours(12,0,0,0);end.setDate(end.getDate()-offset);const start=new Date(end);start.setDate(start.getDate()-days+1);const a=start.toISOString().slice(0,10),b=end.toISOString().slice(0,10);return published().filter(x=>String(x.date||'')>=a&&String(x.date||'')<=b)}
+  function download(name,mime,text){const blob=new Blob([text],{type:mime});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+  const csvCell=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  function csv(rows,headers){return [headers.map(csvCell).join(';'),...rows.map(r=>headers.map(h=>csvCell(r[h])).join(';'))].join('\n')}
+
+  function reportView(){
+    setHead('Raporty','Miesięczne zestawienia wyników i eksport danych.');
+    const cur=dated(30),prev=dated(30,30),curScore=cur.reduce((s,x)=>s+score(x),0),prevScore=prev.reduce((s,x)=>s+score(x),0);
+    const change=prevScore?((curScore-prevScore)/prevScore*100):(curScore?100:0);
+    const likes=cur.reduce((s,x)=>s+num(x.likes),0),comments=cur.reduce((s,x)=>s+num(x.comments),0);
+    const formats={};cur.forEach(x=>{const k=typeOf(x),g=formats[k]||(formats[k]={n:0,s:0});g.n++;g.s+=score(x)});
+    const formatList=Object.entries(formats).map(([name,v])=>({name,count:v.n,avg:v.s/Math.max(1,v.n)})).sort((a,b)=>b.avg-a.avg);
+    const top=cur.slice().sort((a,b)=>score(b)-score(a)).slice(0,10);
+    return `<section class="final-suite"><div class="final-card"><div class="final-head"><div><h2>Raport 30 dni</h2><p class="page-subtitle">Dane lokalne + zsynchronizowane Social Media. AI nie jest wymagane.</p></div><div class="final-actions"><button class="ghost" id="finalReportCsv">Eksport CSV</button><button class="ghost" id="finalReportJson">Eksport JSON</button><button class="primary" id="finalReportPrint">Drukuj / PDF</button></div></div><div class="final-grid"><div class="final-kpi"><span>Publikacje</span><strong>${cur.length}</strong></div><div class="final-kpi"><span>Polubienia</span><strong>${fmt(likes)}</strong></div><div class="final-kpi"><span>Komentarze</span><strong>${fmt(comments)}</strong></div><div class="final-kpi"><span>Zmiana wyniku</span><strong>${change>0?'+':''}${change.toFixed(1)}%</strong></div></div></div><div class="final-card"><h3>Skuteczność formatów</h3><div class="final-pref">${formatList.length?formatList.map((x,i)=>`<div class="final-pref-row"><b>${esc(x.name)}</b><div class="final-meter"><i style="width:${Math.max(6,(x.avg/(formatList[0]?.avg||1))*100)}%"></i></div><span>${x.avg.toFixed(1)}</span></div>`).join(''):'<div class="final-empty">Zbieram wyniki formatów.</div>'}</div></div><div class="final-card"><h3>TOP treści</h3><div class="final-table-wrap">${top.length?`<table class="final-table"><thead><tr><th>Data</th><th>Treść</th><th>Format</th><th>❤️</th><th>💬</th><th>Wynik</th></tr></thead><tbody>${top.map(x=>`<tr><td>${esc(x.date||'')}</td><td>${esc(x.title||'Bez tytułu')}</td><td>${esc(typeOf(x))}</td><td>${fmt(x.likes)}</td><td>${fmt(x.comments)}</td><td><b>${fmt(score(x))}</b></td></tr>`).join('')}</tbody></table>`:'<div class="final-empty">Brak zsynchronizowanych wyników.</div>'}</div></div></section>`;
+  }
+  function bindReports(){
+    q('#finalReportCsv')?.addEventListener('click',()=>{const rows=dated(30).map(x=>({data:x.date||'',tytul:x.title||'',format:typeOf(x),polubienia:num(x.likes),komentarze:num(x.comments),wynik:score(x)}));download(`raport-social-${TODAY()}.csv`,'text/csv;charset=utf-8','\ufeff'+csv(rows,['data','tytul','format','polubienia','komentarze','wynik']))});
+    q('#finalReportJson')?.addEventListener('click',()=>download(`raport-social-${TODAY()}.json`,'application/json',JSON.stringify({generatedAt:new Date().toISOString(),profiles:read(PROFILES,[]),history:read(HISTORY,{}),items:dated(30)},null,2)));
+    q('#finalReportPrint')?.addEventListener('click',()=>window.print());
+  }
+
+  function audienceView(){
+    setHead('Odbiorcy','Segmenty społeczności i preferencje wynikające z realnych reakcji.');
+    const profile=read('aii-creator-profile',{}),segments=read(AUDIENCE,[])||[],items=dated(60),groups={};
+    items.forEach(x=>{const k=typeOf(x),g=groups[k]||(groups[k]={n:0,s:0});g.n++;g.s+=score(x)});
+    const prefs=Object.entries(groups).map(([name,g])=>({name,avg:g.s/Math.max(1,g.n)})).sort((a,b)=>b.avg-a.avg),max=Math.max(1,...prefs.map(x=>x.avg));
+    return `<section class="final-suite"><div class="final-card"><div class="final-head"><div><h2>Główna grupa odbiorców</h2><p class="page-subtitle">Opis jest edytowalny; demografii nie zgadujemy bez danych Insights.</p></div><span class="final-badge">DATA QUALITY</span></div><textarea class="final-textarea" id="finalAudienceMain">${esc(profile.audience||'')}</textarea><div class="final-actions" style="margin-top:8px"><button class="primary" id="finalAudienceSave">Zapisz grupę odbiorców</button></div></div><div class="final-card"><h3>Preferencje według reakcji</h3><div class="final-pref">${prefs.length?prefs.map(x=>`<div class="final-pref-row"><b>${esc(x.name)}</b><div class="final-meter"><i style="width:${Math.max(6,x.avg/max*100)}%"></i></div><span>${x.avg.toFixed(1)}</span></div>`).join(''):'<div class="final-empty">Za mało wyników do porównania formatów.</div>'}</div></div><div class="final-card"><h3>Segmenty własne</h3><div class="final-form" style="grid-template-columns:1fr 2fr auto"><label>Nazwa segmentu<input id="finalSegName" placeholder="Np. Beauty budget"></label><label>Opis / potrzeba<input id="finalSegNote" placeholder="Czego szuka ta grupa?"></label><button class="primary" id="finalSegAdd">＋ Dodaj</button></div><div id="finalSegments">${segments.length?segments.map(s=>`<div class="final-segment"><b>${esc(s.name)}</b><span>${esc(s.note||'')}</span><button class="ghost" data-seg-del="${esc(s.id)}">Usuń</button></div>`).join(''):'<div class="final-empty">Dodaj pierwszy własny segment odbiorców.</div>'}</div></div></section>`;
+  }
+  function bindAudience(){
+    q('#finalAudienceSave')?.addEventListener('click',()=>{const p=read('aii-creator-profile',{});p.audience=q('#finalAudienceMain')?.value.trim()||'';save('aii-creator-profile',p);toast('Grupa odbiorców zapisana')});
+    q('#finalSegAdd')?.addEventListener('click',()=>{const name=q('#finalSegName')?.value.trim(),note=q('#finalSegNote')?.value.trim();if(!name){toast('Wpisz nazwę segmentu');return}const a=read(AUDIENCE,[])||[];a.unshift({id:String(Date.now()),name,note,createdAt:Date.now()});save(AUDIENCE,a);renderPage('audience')});
+    qa('[data-seg-del]').forEach(b=>b.addEventListener('click',()=>{save(AUDIENCE,(read(AUDIENCE,[])||[]).filter(x=>String(x.id)!==String(b.dataset.segDel)));renderPage('audience')}));
+  }
+
+  function financeKey(page){return page==='revenue'?REVENUE:page==='expenses'?EXPENSES:INVOICES}
+  function financeTitle(page){return page==='revenue'?'Przychody':page==='expenses'?'Wydatki':'Faktury'}
+  function financeRows(page){return read(financeKey(page),[])||[]}
+  function allTotal(key){return (read(key,[])||[]).reduce((s,x)=>s+num(x.amount),0)}
+  function financeView(page){
+    setHead(financeTitle(page),page==='invoices'?'Rejestr faktur i terminów płatności.':'Lokalny rejestr finansowy dostępny także offline.');
+    const rows=financeRows(page).slice().sort((a,b)=>String(b.date||'').localeCompare(String(a.date||''))),total=rows.reduce((s,x)=>s+num(x.amount),0),profit=allTotal(REVENUE)-allTotal(EXPENSES);
+    const invoice=page==='invoices';
+    const form=invoice?`<div class="final-form invoice"><label>Data<input id="finDate" type="date" value="${TODAY()}"></label><label>Termin<input id="finDue" type="date"></label><label>Numer<input id="finNumber" placeholder="FV/..."></label><label>Klient<input id="finTitle" placeholder="Marka / klient"></label><label>Kwota<input id="finAmount" type="number" min="0" step="0.01"></label><label>Status<select id="finStatus"><option>Do zapłaty</option><option>Zapłacona</option><option>Po terminie</option></select></label><button class="primary" id="finAdd">＋ Dodaj</button></div>`:`<div class="final-form"><label>Data<input id="finDate" type="date" value="${TODAY()}"></label><label>Opis<input id="finTitle" placeholder="${page==='revenue'?'Kampania / marka':'Narzędzie / usługa'}"></label><label>Kategoria<input id="finCategory" placeholder="${page==='revenue'?'Współpraca':'Oprogramowanie'}"></label><label>Kwota<input id="finAmount" type="number" min="0" step="0.01"></label><button class="primary" id="finAdd">＋ Dodaj</button></div>`;
+    return `<section class="final-suite"><div class="final-card"><div class="final-head"><div><h2>${financeTitle(page)}</h2><p class="page-subtitle">Zapis lokalny • OFFLINE READY • 0 tokenów AI</p></div><div class="final-actions"><button class="ghost" id="finExport">Eksport CSV</button></div></div><div class="final-grid"><div class="final-kpi"><span>Liczba pozycji</span><strong>${rows.length}</strong></div><div class="final-kpi"><span>Łączna wartość</span><strong>${money(total)}</strong></div><div class="final-kpi"><span>Przychody razem</span><strong>${money(allTotal(REVENUE))}</strong></div><div class="final-kpi"><span>Bilans</span><strong class="final-profit ${profit>=0?'pos':'neg'}">${money(profit)}</strong></div></div>${form}</div><div class="final-card"><h3>Rejestr</h3><div class="final-table-wrap">${rows.length?`<table class="final-table"><thead><tr>${invoice?'<th>Data</th><th>Termin</th><th>Numer</th><th>Klient</th><th>Status</th><th>Kwota</th>':'<th>Data</th><th>Opis</th><th>Kategoria</th><th>Kwota</th>'}<th></th></tr></thead><tbody>${rows.map(x=>invoice?`<tr><td>${esc(x.date||'')}</td><td>${esc(x.due||'')}</td><td>${esc(x.number||'')}</td><td>${esc(x.title||'')}</td><td>${esc(x.status||'')}</td><td>${money(x.amount)}</td><td><button class="ghost" data-fin-del="${esc(x.id)}">Usuń</button></td></tr>`:`<tr><td>${esc(x.date||'')}</td><td>${esc(x.title||'')}</td><td>${esc(x.category||'')}</td><td>${money(x.amount)}</td><td><button class="ghost" data-fin-del="${esc(x.id)}">Usuń</button></td></tr>`).join('')}</tbody></table>`:'<div class="final-empty">Brak pozycji. Formularz powyżej zapisuje dane lokalnie.</div>'}</div></div></section>`;
+  }
+  function bindFinance(page){
+    q('#finAdd')?.addEventListener('click',()=>{const amount=num(q('#finAmount')?.value),title=q('#finTitle')?.value.trim();if(!title||amount<=0){toast('Wpisz opis/klienta i prawidłową kwotę');return}const rows=financeRows(page),item={id:String(Date.now()),date:q('#finDate')?.value||TODAY(),title,amount,createdAt:Date.now()};if(page==='invoices'){item.due=q('#finDue')?.value||'';item.number=q('#finNumber')?.value.trim()||'';item.status=q('#finStatus')?.value||'Do zapłaty'}else item.category=q('#finCategory')?.value.trim()||'Inne';rows.unshift(item);save(financeKey(page),rows);toast('Pozycja zapisana');renderPage(page)});
+    qa('[data-fin-del]').forEach(b=>b.addEventListener('click',()=>{save(financeKey(page),financeRows(page).filter(x=>String(x.id)!==String(b.dataset.finDel)));renderPage(page)}));
+    q('#finExport')?.addEventListener('click',()=>{const rows=financeRows(page);const headers=page==='invoices'?['date','due','number','title','status','amount']:['date','title','category','amount'];download(`${page}-${TODAY()}.csv`,'text/csv;charset=utf-8','\ufeff'+csv(rows,headers))});
+  }
+
+  function diagCard(name,status,detail){const good=status===true,bad=status===false;return `<div class="final-diag"><b>${esc(name)}</b><span>${good?'● działa':bad?'○ niedostępne':'— nieznane'}</span><span>${esc(detail||'')}</span></div>`}
+  function settingsView(){
+    setHead('Ustawienia','Tryb pracy, integracje, backup i diagnostyka.');
+    const d=read(DIAG,null),p=d?.providers||{};
+    return `<section class="final-suite"><div class="final-card"><div class="final-head"><div><h2>Tryb aplikacji</h2><p class="page-subtitle">Aktualnie: <b>${esc(mode())}</b></p></div><button class="primary" id="finalChangeMode">Zmień tryb</button></div><div class="final-note">Integracje internetowe i dane lokalne pozostają niezależne od dostępności OpenAI.</div></div><div class="final-card"><div class="final-head"><div><h2>Integracje</h2><p class="page-subtitle">Pokazuję tylko stan techniczny — bez ujawniania kluczy i tokenów.</p></div><button class="ghost" id="finalDiagRun">↻ Sprawdź teraz</button></div><div class="final-diag-grid">${diagCard('Instagram Meta',p.instagram?.metaHealthy,d?`Źródło: ${p.instagram?.activeSource||'—'}`:'Uruchom diagnostykę')}${diagCard('Facebook Meta',p.facebook?.metaHealthy,d?`Źródło: ${p.facebook?.activeSource||'—'}`:'Uruchom diagnostykę')}${diagCard('TikTok / Apify',p.tiktok?.configured,d?`Źródło: ${p.tiktok?.activeSource||'—'}`:'Uruchom diagnostykę')}${diagCard('Cache lokalny',true,'Zawsze dostępny')}</div><div class="final-note">Ostatnia diagnostyka: ${esc(d?.checkedAt?new Date(d.checkedAt).toLocaleString('pl-PL'):'jeszcze nie uruchomiono')}</div></div><div class="final-card"><h2>Backup danych aplikacji</h2><p class="page-subtitle">Eksport obejmuje wyłącznie klucze aplikacji zapisane w localStorage (`aii-*`).</p><div class="final-actions"><button class="primary" id="finalBackupExport">Pobierz backup JSON</button><button class="ghost" id="finalBackupImport">Importuj backup</button><input id="finalBackupFile" type="file" accept="application/json,.json" hidden></div><div class="final-note">Import wymaga potwierdzenia i po zakończeniu przeładuje aplikację.</div></div></section>`;
+  }
+  async function runDiagnostics(){
+    const result={checkedAt:new Date().toISOString(),online:navigator.onLine,providers:null,meta:null};
+    if(navigator.onLine){
+      try{const r=await fetch('/api/social-provider-status',{cache:'no-store'});if(r.ok){const j=await r.json();result.providers=j.providers||null}}catch{}
+      try{const r=await fetch('/api/meta-auth-status',{cache:'no-store'});if(r.ok)result.meta=await r.json()}catch{}
+    }
+    save(DIAG,result);return result;
+  }
+  function backupObject(){const data={version:1,exportedAt:new Date().toISOString(),data:{}};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k?.startsWith('aii-'))data.data[k]=localStorage.getItem(k)}return data}
+  function bindSettings(){
+    q('#finalChangeMode')?.addEventListener('click',()=>q('#systemStatus')?.click());
+    q('#finalDiagRun')?.addEventListener('click',async()=>{const b=q('#finalDiagRun');if(b){b.disabled=true;b.textContent='Sprawdzam…'}await runDiagnostics();toast('Diagnostyka zakończona');renderPage('settings')});
+    q('#finalBackupExport')?.addEventListener('click',()=>download(`ai-influencer-backup-${TODAY()}.json`,'application/json',JSON.stringify(backupObject(),null,2)));
+    q('#finalBackupImport')?.addEventListener('click',()=>q('#finalBackupFile')?.click());
+    q('#finalBackupFile')?.addEventListener('change',async e=>{const f=e.target.files?.[0];if(!f)return;try{const j=JSON.parse(await f.text());if(!j?.data||typeof j.data!=='object')throw new Error('Nieprawidłowy backup');if(!confirm('Zaimportować dane aplikacji z backupu? Istniejące klucze o tych samych nazwach zostaną zastąpione.'))return;Object.entries(j.data).forEach(([k,v])=>{if(k.startsWith('aii-')&&typeof v==='string')localStorage.setItem(k,v)});location.reload()}catch(err){toast('Nie udało się wczytać backupu')}});
+  }
+
+  function supportReport(){const d=read(DIAG,null),profiles=read(PROFILES,[])||[],queue=read(QUEUE,[])||[];return [`AI Influencer Studio — raport diagnostyczny`,`Czas: ${new Date().toLocaleString('pl-PL')}`,`Tryb: ${mode()}`,`Online: ${navigator.onLine?'tak':'nie'}`,`Profile: ${profiles.length}`,`Pozycje Social/Kalendarz: ${queue.length}`,`Opublikowane: ${published().length}`,`Przychody: ${financeRows('revenue').length}`,`Wydatki: ${financeRows('expenses').length}`,`Faktury: ${financeRows('invoices').length}`,`Instagram Meta: ${d?.providers?.instagram?.metaHealthy===true?'OK':d?'NIE/nieznane':'nie sprawdzono'}`,`Facebook Meta: ${d?.providers?.facebook?.metaHealthy===true?'OK':d?'NIE/nieznane':'nie sprawdzono'}`,`TikTok: ${d?.providers?.tiktok?.configured===true?'skonfigurowany':d?'nieskonfigurowany':'nie sprawdzono'}`,`User agent: ${navigator.userAgent}`].join('\n')}
+  function supportView(){setHead('Wsparcie','Diagnostyka i szybkie przejścia do ustawień integracji.');return `<section class="final-suite"><div class="final-card"><div class="final-head"><div><h2>Centrum wsparcia</h2><p class="page-subtitle">Najpierw diagnostyka, potem konkretne działanie — bez ujawniania sekretów.</p></div><div class="final-actions"><button class="primary" id="finalSupportDiag">Uruchom diagnostykę</button><button class="ghost" id="finalSupportCopy">Kopiuj raport</button></div></div><div class="final-support" id="finalSupportReport">${esc(supportReport())}</div></div><div class="final-card"><h3>Szybkie akcje</h3><div class="final-actions"><button class="ghost" data-final-go="settings">Ustawienia integracji</button><button class="ghost" data-final-go="social">Social Media</button><button class="ghost" data-final-go="stats">Statystyki</button><button class="ghost" data-final-go="reports">Raporty</button></div><div class="final-note">Brak OpenAI nie blokuje dostępu do danych, kalendarza, finansów, raportów ani lokalnych rekomendacji.</div></div></section>`}
+  function bindSupport(){
+    q('#finalSupportDiag')?.addEventListener('click',async()=>{await runDiagnostics();q('#finalSupportReport').textContent=supportReport();toast('Raport odświeżony')});
+    q('#finalSupportCopy')?.addEventListener('click',async()=>{const t=supportReport();try{await navigator.clipboard.writeText(t);toast('Raport skopiowany')}catch{const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove();toast('Raport skopiowany')}});
+    qa('[data-final-go]').forEach(b=>b.addEventListener('click',()=>q(`.nav-item[data-view="${b.dataset.finalGo}"]`)?.click()));
+  }
+
+  function renderPage(page){
+    if(!PAGES.has(page))return;const root=q('#content');if(!root)return;localStorage.setItem('aii-last-view',page);
+    if(page==='reports'){root.innerHTML=reportView();bindReports();return}
+    if(page==='audience'){root.innerHTML=audienceView();bindAudience();return}
+    if(['revenue','expenses','invoices'].includes(page)){root.innerHTML=financeView(page);bindFinance(page);return}
+    if(page==='settings'){root.innerHTML=settingsView();bindSettings();return}
+    if(page==='support'){root.innerHTML=supportView();bindSupport()}
+  }
+  function active(){return q('.nav-item.active')?.dataset?.view||localStorage.getItem('aii-last-view')||''}
+  function bindNav(){qa('.nav-item').forEach(a=>{if(a.dataset.finalBound)return;a.dataset.finalBound='1';a.addEventListener('click',()=>{const page=a.dataset.view;if(PAGES.has(page))setTimeout(()=>renderPage(page),35)})})}
+  document.addEventListener('DOMContentLoaded',()=>{bindNav();const root=q('#content');if(root)new MutationObserver(()=>{const p=active();if(PAGES.has(p)&&!q('.final-suite'))setTimeout(()=>renderPage(p),20)}).observe(root,{childList:true,subtree:false});const nav=q('.nav');if(nav)new MutationObserver(bindNav).observe(nav,{childList:true,subtree:true});setTimeout(()=>{const p=active();if(PAGES.has(p))renderPage(p)},350)});
+  window.addEventListener('storage',e=>{if(e.key?.startsWith('aii-')&&PAGES.has(active()))setTimeout(()=>renderPage(active()),30)});
+  document.addEventListener('aii:social-changed',()=>{if(['reports','audience'].includes(active()))setTimeout(()=>renderPage(active()),50)});
+  window.AIIAppFinalization={render:renderPage,diagnostics:runDiagnostics,backup:backupObject};
+})();
