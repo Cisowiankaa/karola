@@ -92,12 +92,12 @@
     };
   }
 
+  setSafeInitialStatus();
+  loadCalendarHandoff();
   window.AII_detectRuntime = detectRuntime;
   window.addEventListener('online', detectRuntime);
   window.addEventListener('offline', detectRuntime);
   document.addEventListener('DOMContentLoaded', () => {
-    setSafeInitialStatus();
-    loadCalendarHandoff();
     if (typeof window.AII_refreshDashboard === 'function') window.AII_refreshDashboard();
     detectRuntime();
     setInterval(detectRuntime, 60000);
