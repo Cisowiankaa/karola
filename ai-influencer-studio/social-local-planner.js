@@ -1,7 +1,7 @@
 (() => {
   const QUEUE='aii-social-queue';
   const RECS='aii-social-local-recommendations';
-  const PLAN='aii-social-local-week-plan';
+  const PLAN='aii-social-local-month-plan';
   const q=(s,r=document)=>r.querySelector(s);
   const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
   const save=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
@@ -11,7 +11,7 @@
 
   const style=document.createElement('style');
   style.textContent=`
-    .local-week-planner{margin-top:12px;padding:12px;border:1px solid #e7e1fa;border-radius:12px;background:#fcfbff}.local-week-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.local-week-head b{font-size:9.5px}.local-week-head span{display:block;font-size:7px;color:#777f8d;margin-top:3px}.local-week-actions{display:flex;gap:7px;flex-wrap:wrap}.local-week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:9px}.local-day{padding:9px;border:1px solid #ece8f7;border-radius:9px;background:#fff;min-height:105px}.local-day em{display:block;font-style:normal;font-size:6.5px;color:#777f8d;text-transform:uppercase;font-weight:900}.local-day strong{display:block;font-size:8.5px;line-height:1.35;margin-top:4px}.local-day small{display:block;font-size:6.8px;color:#777f8d;line-height:1.4;margin-top:4px}.local-day .local-type{display:inline-flex;margin-top:6px;padding:3px 5px;border-radius:999px;background:#f1edff;color:#644fd1;font-size:6.2px;font-weight:900}.local-week-note{font-size:7px;color:#777f8d;line-height:1.45;margin-top:8px}@media(max-width:1050px){.local-week-grid{grid-template-columns:repeat(4,1fr)}}@media(max-width:700px){.local-week-grid{grid-template-columns:1fr 1fr}}@media(max-width:440px){.local-week-grid{grid-template-columns:1fr}}
+    .local-month-planner{margin-top:12px;padding:12px;border:1px solid #e7e1fa;border-radius:12px;background:#fcfbff}.local-month-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.local-month-head b{font-size:9.5px}.local-month-head span{display:block;font-size:7px;color:#777f8d;margin-top:3px}.local-month-actions{display:flex;gap:7px;flex-wrap:wrap}.local-month-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:9px;max-height:560px;overflow:auto;padding-right:2px}.local-day{padding:9px;border:1px solid #ece8f7;border-radius:9px;background:#fff;min-height:122px}.local-day em{display:block;font-style:normal;font-size:6.5px;color:#777f8d;text-transform:uppercase;font-weight:900}.local-day strong{display:block;font-size:8.5px;line-height:1.35;margin-top:4px}.local-day small{display:block;font-size:6.8px;color:#777f8d;line-height:1.4;margin-top:4px}.local-day .local-type{display:inline-flex;margin-top:6px;padding:3px 5px;border-radius:999px;background:#f1edff;color:#644fd1;font-size:6.2px;font-weight:900}.local-copy{margin-top:6px;padding-top:6px;border-top:1px dashed #ece8f7}.local-copy b{display:block;font-size:6.8px}.local-copy span{display:block;font-size:6.5px;color:#656b78;line-height:1.35;margin-top:2px}.local-month-note{font-size:7px;color:#777f8d;line-height:1.45;margin-top:8px}@media(max-width:1100px){.local-month-grid{grid-template-columns:repeat(4,1fr)}}@media(max-width:800px){.local-month-grid{grid-template-columns:1fr 1fr}}@media(max-width:440px){.local-month-grid{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
 
@@ -22,21 +22,63 @@
   function hourFrom(title){const m=String(title||'').match(/(\d{1,2}):00/);return m?`${String(Number(m[1])).padStart(2,'0')}:00`:'18:00'}
   function topicFrom(title){return String(title||'').replace(/^Rozwijaj temat:\s*/i,'').trim()||'główny temat profilu'}
   function formatFrom(title){return String(title||'').replace(/^Powtórz:\s*/i,'').trim()||'Post'}
+
+  const HOOKS=[
+    topic=>`Jeśli interesuje Cię ${topic}, zacznij od tego jednego kroku.`,
+    topic=>`Najczęstszy błąd przy ${topic}? Właśnie ten.`,
+    topic=>`3 rzeczy o ${topic}, które warto wiedzieć przed kolejną decyzją.`,
+    topic=>`To może całkowicie zmienić Twoje podejście do ${topic}.`,
+    topic=>`Zapisz to, jeśli ${topic} jest dla Ciebie ważne.`,
+    topic=>`Mały test: czy robisz to dobrze w temacie ${topic}?`,
+    topic=>`Nie potrzebujesz więcej chaosu. Potrzebujesz prostszego podejścia do ${topic}.`,
+    topic=>`Co działa lepiej w ${topic}? Sprawdźmy na konkretnym przykładzie.`
+  ];
+  const CTAS=[
+    'Napisz w komentarzu, którą opcję wybierasz.',
+    'Zapisz ten post, żeby wrócić do niego później.',
+    'Wyślij to osobie, której może się przydać.',
+    'Daj znać, czy chcesz część 2.',
+    'Napisz swoje doświadczenie — porównamy wyniki.',
+    'Który punkt wdrożysz jako pierwszy?',
+    'Jeśli to było pomocne, zostaw krótkie „tak”.',
+    'Zadaj mi jedno pytanie do tego tematu w komentarzu.'
+  ];
+  const THEMES=[
+    ['Hook + problem',topic=>`Pokaż konkretny problem odbiorcy związany z: ${topic}, a następnie jedną prostą obietnicę rozwiązania.`],
+    ['Porada praktyczna',topic=>`Podaj 3 krótkie wskazówki dotyczące: ${topic}. Każda ma być możliwa do zastosowania od razu.`],
+    ['Dowód / przykład',topic=>`Pokaż realny przykład, rezultat, porównanie albo „przed i po” związane z: ${topic}.`],
+    ['Pytanie do społeczności',topic=>`Zadaj jedno proste pytanie wokół: ${topic}. Bez rozbudowanego wstępu.`],
+    ['Mini tutorial',topic=>`Pokaż jeden rezultat krok po kroku związany z: ${topic}.`],
+    ['Mit kontra fakt',topic=>`Obal jeden popularny mit dotyczący: ${topic}, a następnie podaj prosty fakt.`],
+    ['Lista kontrolna',topic=>`Stwórz checklistę 4–5 punktów dotyczącą: ${topic}.`],
+    ['Porównanie',topic=>`Porównaj dwie popularne opcje w temacie: ${topic} i wskaż, dla kogo jest każda z nich.`],
+    ['Kulisy',topic=>`Pokaż proces, przygotowanie lub kulisy związane z: ${topic}.`],
+    ['FAQ',topic=>`Odpowiedz na jedno często zadawane pytanie dotyczące: ${topic}.`]
+  ];
+
+  function pickType(i,best){
+    const cycle=[best,'Reels','Post','Carousel','Reels','Post'];
+    return cycle[i%cycle.length]||'Post';
+  }
   function build(){
-    const r=getRecs(),topic=topicFrom(r?.topic?.title),format=formatFrom(r?.format?.title),time=hourFrom(r?.hour?.title);
-    const templates=[
-      ['Hook + problem',`Mocne otwarcie dotyczące: ${topic}. Pokaż konkretny problem odbiorcy i obietnicę rozwiązania.`,format],
-      ['Porada praktyczna',`3 krótkie wskazówki związane z: ${topic}. Każda wskazówka ma być możliwa do zastosowania od razu.`,format],
-      ['Dowód / przykład',`Pokaż realny przykład, rezultat albo krótkie „przed i po” związane z: ${topic}.`,'Carousel'],
-      ['Post angażujący',`Jedno proste pytanie do społeczności na temat: ${topic}. Zakończ jasnym CTA do komentarza.`,'Post'],
-      ['Mini tutorial',`Krótki tutorial krok po kroku dotyczący: ${topic}. Skup się na jednym rezultacie.`,'Reels'],
-      ['Mit kontra fakt',`Obal jeden popularny mit związany z: ${topic}, a potem podaj prosty fakt lub rozwiązanie.`,'Reels'],
-      ['Podsumowanie tygodnia',`Zbierz 3 najważniejsze wnioski tygodnia wokół: ${topic}. Dodaj pytanie, czego odbiorcy chcą więcej.`,'Post']
-    ];
-    const plan=templates.map((x,i)=>({id:`local-week-${isoDay(i)}-${i}`,date:isoDay(i),time,title:x[0],notes:x[1],type:x[2],platform:'Instagram',status:'Planowany',source:'Local Planner',local:true}));
+    const r=getRecs(),topic=topicFrom(r?.topic?.title),bestFormat=formatFrom(r?.format?.title),time=hourFrom(r?.hour?.title);
+    const plan=Array.from({length:30},(_,i)=>{
+      const theme=THEMES[i%THEMES.length];
+      const hook=HOOKS[i%HOOKS.length](topic);
+      const cta=CTAS[(i*3)%CTAS.length];
+      const type=pickType(i,bestFormat);
+      return {
+        id:`local-month-${isoDay(i)}-${i}`,
+        date:isoDay(i),time,
+        title:theme[0],
+        notes:theme[1](topic),
+        hook,cta,type,
+        platform:'Instagram',status:'Planowany',source:'Local Planner',local:true
+      };
+    });
     save(PLAN,plan);return plan;
   }
-  function getPlan(){const p=read(PLAN,[]);return Array.isArray(p)&&p.length===7?p:build()}
+  function getPlan(){const p=read(PLAN,[]);return Array.isArray(p)&&p.length===30?p:build()}
   function schedule(){
     const queue=read(QUEUE,[]),plan=getPlan();let added=0;
     for(const item of plan){
@@ -45,22 +87,25 @@
     }
     save(QUEUE,queue);
     document.dispatchEvent(new CustomEvent('aii:social-changed',{detail:{source:'Local Planner',added}}));
-    toast?.(added?`Dodano ${added} pozycji do kalendarza`:'Plan tygodnia jest już w kalendarzu');
+    toast?.(added?`Dodano ${added} pozycji do kalendarza`:'Plan 30 dni jest już w kalendarzu');
     return added;
   }
-  function dayCard(x){return `<div class="local-day"><em>${esc(new Date(`${x.date}T12:00:00`).toLocaleDateString('pl-PL',{weekday:'short',day:'2-digit',month:'2-digit'}))} • ${esc(x.time)}</em><strong>${esc(x.title)}</strong><small>${esc(x.notes)}</small><span class="local-type">${esc(x.type)}</span></div>`}
-  function html(){const plan=getPlan();return `<div class="local-week-planner" id="localWeekPlanner"><div class="local-week-head"><div><b>Plan 7 dni — bez AI</b><span>Tworzony lokalnie na podstawie wyników Twoich publikacji</span></div><div class="local-week-actions"><button class="ghost" type="button" id="localWeekRebuild">↻ Przelicz</button><button class="primary" type="button" id="localWeekSchedule">＋ Dodaj do kalendarza</button></div></div><div class="local-week-grid">${plan.map(dayCard).join('')}</div><div class="local-week-note">Plan działa bez OpenAI i bez dodatkowych tokenów. Wykorzystuje lokalne rekomendacje formatu, tematu i godziny publikacji. Możesz go przeliczać po każdej synchronizacji nowych wyników.</div></div>`}
+  function dayCard(x){
+    return `<div class="local-day"><em>${esc(new Date(`${x.date}T12:00:00`).toLocaleDateString('pl-PL',{weekday:'short',day:'2-digit',month:'2-digit'}))} • ${esc(x.time)}</em><strong>${esc(x.title)}</strong><small>${esc(x.notes)}</small><span class="local-type">${esc(x.type)}</span><div class="local-copy"><b>Hook</b><span>${esc(x.hook)}</span><b style="margin-top:4px">CTA</b><span>${esc(x.cta)}</span></div></div>`
+  }
+  function html(){const plan=getPlan();return `<div class="local-month-planner" id="localMonthPlanner"><div class="local-month-head"><div><b>Plan 30 dni — bez AI</b><span>Lokalny kalendarz treści + hooki + CTA, bez OpenAI i bez dodatkowych tokenów</span></div><div class="local-month-actions"><button class="ghost" type="button" id="localMonthRebuild">↻ Przelicz</button><button class="primary" type="button" id="localMonthSchedule">＋ Dodaj 30 dni do kalendarza</button></div></div><div class="local-month-grid">${plan.map(dayCard).join('')}</div><div class="local-month-note">Plan wykorzystuje lokalne rekomendacje formatu, tematu i godziny. Hooki oraz CTA powstają z wbudowanych szablonów — 0 tokenów. Duplikaty nie są ponownie dodawane do kolejki.</div></div>`}
   function render(){
     if(localStorage.getItem('aii-last-view')!=='social')return;
     const anchor=q('#socialPerformanceRadar');if(!anchor)return;
-    q('#localWeekPlanner')?.remove();anchor.insertAdjacentHTML('beforeend',html());
-    q('#localWeekRebuild')?.addEventListener('click',()=>{save(PLAN,build());render();toast?.('Plan lokalny przeliczony')});
-    q('#localWeekSchedule')?.addEventListener('click',schedule);
+    q('#localWeekPlanner')?.remove();q('#localMonthPlanner')?.remove();anchor.insertAdjacentHTML('beforeend',html());
+    q('#localMonthRebuild')?.addEventListener('click',()=>{build();render();toast?.('Plan 30 dni przeliczony')});
+    q('#localMonthSchedule')?.addEventListener('click',schedule);
   }
   document.addEventListener('DOMContentLoaded',()=>{
     const root=q('#content');if(root)new MutationObserver(()=>setTimeout(render,60)).observe(root,{childList:true,subtree:true});
-    document.addEventListener('aii:social-changed',()=>setTimeout(()=>{save(PLAN,build());render()},80));
+    document.addEventListener('aii:social-changed',()=>setTimeout(()=>{build();render()},80));
     setTimeout(render,450);
   });
-  window.AIILocalWeekPlanner={build,getPlan,schedule,refresh:render};
+  window.AIILocalMonthPlanner={build,getPlan,schedule,refresh:render};
+  window.AIILocalWeekPlanner={build:()=>getPlan().slice(0,7),getPlan:()=>getPlan().slice(0,7),schedule,refresh:render};
 })();
