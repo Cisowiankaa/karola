@@ -183,6 +183,9 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
 
 
 
+
+
+
 <!-- BDSM_RUNTIME_INLINE_START -->
 <script>
 (() => {
@@ -1105,6 +1108,29 @@ function dash(){const root=document.querySelector('#view-dashboard');if(!root)re
 function open(k){day=k||key(new Date());ui();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-day-agenda')?.classList.remove('hidden');render()}
 function install(){ui();dash();document.addEventListener('click',e=>{const d=e.target.closest?.('[data-mc-date]');if(d&&d.closest('#view-month-calendar')){e.preventDefault();e.stopImmediatePropagation();open(d.dataset.mcDate)}},true);['bdsm-offences-updated','bdsm-education-tasks-updated','bdsm-written-notes-updated','bdsm-hourly-reports-updated','bdsm-case-linked','bdsm-sync-complete','bdsm-day-agenda-updated'].forEach(ev=>document.addEventListener(ev,()=>{dash();if(!document.querySelector('#view-day-agenda')?.classList.contains('hidden'))render()}));window.addEventListener('storage',()=>{dash();if(!document.querySelector('#view-day-agenda')?.classList.contains('hidden'))render()});window.bdsmDayAgenda={open,refresh:render,date:()=>day,print:pdf,meta:()=>meta(),checklist:list}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
+<script>
+(()=>{
+  if(window.__bdsmAgendaCloudSyncInstalled)return;
+  window.__bdsmAgendaCloudSyncInstalled=true;
+  const API='https://hook.eu1.make.com/gw8nr0beqtbymtd2xgiga3wn7qfjhp25';
+  const META='bdsm-app-day-agenda-meta-v1',CLOUD='bdsm-app-cloud-config',SENT='bdsm-app-agenda-cloud-sent-v1';
+  const read=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
+  const write=(k,v)=>localStorage.setItem(k,JSON.stringify(v));
+  const iso=()=>new Date().toISOString();
+  const truth=v=>v===true||String(v).toLowerCase()==='true'||String(v)==='1';
+  function accountId(){let c=read(CLOUD,null);if(!c)c={accountId:'ACC-'+Math.random().toString(36).slice(2,10)};c.apiBase=API;c.enabled=true;write(CLOUD,c);return c.accountId}
+  async function post(payload){const ctl=new AbortController(),timer=setTimeout(()=>ctl.abort(),12000);try{const r=await fetch(API,{method:'POST',mode:'cors',cache:'no-store',credentials:'omit',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify(payload),signal:ctl.signal});if(!r.ok)throw new Error('HTTP '+r.status);const text=await r.text();try{return JSON.parse(text)}catch(_){return text}}finally{clearTimeout(timer)}}
+  function sentMap(){const x=read(SENT,{});return x&&typeof x==='object'?x:{}}
+  async function pushDate(date){const all=read(META,{}),m=all?.[date];if(!m)return;const acc=accountId(),updated=m.updated_at||iso();await post({action:'agenda_day_save',accountId:acc,date,plan:m.plan||'',summary:m.summary||'',done:!!m.done,done_at:m.done_at||'',updated_at:updated});const current=Array.isArray(m.checklist)?m.checklist:[],old=sentMap(),previous=Array.isArray(old[date])?old[date]:[],ids=new Set(current.map(x=>String(x.id||'')));for(const x of current){if(!x.id)continue;await post({action:'agenda_check_save',accountId:acc,check_id:x.id,date,text:x.text||'',time:x.time||'',priority:x.priority||'normal',done:!!x.done,done_at:x.done_at||'',created_at:x.created_at||updated,updated_at:x.updated_at||updated,deleted:false})}for(const id of previous){if(!ids.has(String(id)))await post({action:'agenda_check_save',accountId:acc,check_id:id,date,text:'',time:'',priority:'normal',done:false,done_at:'',created_at:'',updated_at:iso(),deleted:true})}old[date]=[...ids];write(SENT,old);window.dispatchEvent(new CustomEvent('bdsm-agenda-cloud-status',{detail:{ok:true,mode:'push',date}}))}
+  let timers={};function queue(date){clearTimeout(timers[date]);timers[date]=setTimeout(()=>pushDate(date).catch(error=>window.dispatchEvent(new CustomEvent('bdsm-agenda-cloud-status',{detail:{ok:false,mode:'push',date,error:String(error.message||error)}}))),700)}
+  function rowsOf(data,index){const vr=data?.valueRanges?.[index];return Array.isArray(vr?.values)?vr.values:[]}
+  function newer(a,b){return String(a||'')>String(b||'')}
+  async function pull(){const acc=accountId(),data=await post({action:'agenda_pull',accountId:acc});if(!data||typeof data!=='object')return;const dayRows=rowsOf(data,0).slice(1),checkRows=rowsOf(data,1).slice(1),local=read(META,{}),bestDays={},bestChecks={};for(const r of dayRows){if(String(r[6]||'')!==acc)continue;const date=String(r[0]||''),updated=String(r[5]||'');if(!date)continue;if(!bestDays[date]||newer(updated,bestDays[date].updated_at))bestDays[date]={date,plan:r[1]||'',summary:r[2]||'',done:truth(r[3]),done_at:r[4]||'',updated_at:updated}}for(const r of checkRows){if(String(r[9]||'')!==acc)continue;const id=String(r[0]||''),date=String(r[1]||''),updated=String(r[8]||'');if(!id||!date)continue;if(!bestChecks[id]||newer(updated,bestChecks[id].updated_at))bestChecks[id]={id,date,text:r[2]||'',time:r[3]||'',priority:r[4]||'normal',done:truth(r[5]),done_at:r[6]||'',created_at:r[7]||'',updated_at:updated,deleted:truth(r[10])}}const byDate={};Object.values(bestChecks).forEach(x=>{if(!x.deleted)(byDate[x.date]||(byDate[x.date]=[])).push(x)});for(const [date,remote] of Object.entries(bestDays)){const cur=local[date]||{};if(!cur.updated_at||newer(remote.updated_at,cur.updated_at))local[date]={...cur,...remote,checklist:byDate[date]||cur.checklist||[]}}for(const [date,list] of Object.entries(byDate)){if(!bestDays[date]){const cur=local[date]||{};const newest=list.reduce((v,x)=>newer(x.updated_at,v)?x.updated_at:v,'');if(!cur.updated_at||newer(newest,cur.updated_at))local[date]={...cur,checklist:list,updated_at:newest}}write(META,local);const s=sentMap();Object.entries(byDate).forEach(([d,a])=>s[d]=a.map(x=>x.id));write(SENT,s);document.dispatchEvent(new CustomEvent('bdsm-day-agenda-updated',{detail:{source:'cloud'}}));window.bdsmDayAgenda?.refresh?.();window.bdsmTodayDashboard?.refresh?.();window.dispatchEvent(new CustomEvent('bdsm-agenda-cloud-status',{detail:{ok:true,mode:'pull'}}))}
+  async function pushAll(){const all=read(META,{});for(const date of Object.keys(all).sort())await pushDate(date)}
+  function install(){document.addEventListener('bdsm-day-agenda-updated',e=>{if(e.detail?.source==='cloud')return;const d=e.detail?.date;if(d)queue(d)});document.addEventListener('bdsm-sync-complete',()=>pushAll().then(pull).catch(()=>{}));setTimeout(()=>pull().catch(()=>{}),1800);window.bdsmAgendaCloud={pull,pushDate,pushAll}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
 </script>
 <script>
