@@ -1,4 +1,4 @@
-name: BDSM private sync healthcheck
+name: BDSM Supabase sync self-test
 
 on:
   push:
@@ -14,15 +14,19 @@ jobs:
   test-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: POST healthcheck to Make private space
+      - name: POST safe empty sync to Supabase Edge Function
         shell: bash
         run: |
           set -euo pipefail
+          ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnZXN4dWpuanJ1cGxxb3FndnB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4Mjg2ODEsImV4cCI6MjEwMzQwNDY4MX0.nonuToHgBTX9nAZHUrOBzIolGxkWpkz66Zf_wkbZIsE'
+          PUB='sb_publishable_mAAREnT3ube6bTSDnv5l0Q_15fvGh7X'
           code=$(curl -sS -o response.txt -w "%{http_code}" \
-            -X POST 'https://hook.eu1.make.com/i3ukjt21q17182dkudll76bh4p5s51ry' \
+            -X POST 'https://ygesxujnjruplqoqgvpy.supabase.co/functions/v1/bdsm-sync' \
+            -H "Authorization: Bearer $ANON" \
+            -H "apikey: $PUB" \
             -H 'Content-Type: application/json' \
             -H 'Accept: application/json' \
-            --data '{"action":"healthcheck","requestId":"GITHUB-PRIVATE-'"$(date +%s)"'"}')
+            --data '{"action":"sync","requestId":"GITHUB-SUPABASE-'"$(date +%s)"'","accountId":"ACC-SYSTEM-SELFTEST","events":[],"rules":{},"accessList":[],"clientTime":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}')
           cat response.txt || true
           echo "HTTP $code"
           test "$code" -ge 200 -a "$code" -lt 300
