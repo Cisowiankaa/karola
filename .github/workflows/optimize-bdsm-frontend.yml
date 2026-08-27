@@ -19,6 +19,18 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build stable BDSM frontend
         run: python3 bdsm-app/optimize-build.py
+      - name: Inject monthly calendar status v2
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          index = Path('bdsm-app/index.html')
+          module = Path('bdsm-app/month-calendar-status-v2.js').read_text(encoding='utf-8')
+          text = index.read_text(encoding='utf-8')
+          marker = 'window.__bdsmMonthCalendarStatusV2Installed'
+          if marker not in text:
+              text = text.replace('</body>', '<script>\n' + module + '\n</script>\n</body>')
+              index.write_text(text, encoding='utf-8')
+          PY
       - name: Commit optimized index
         run: |
           if git diff --quiet -- bdsm-app/index.html; then
