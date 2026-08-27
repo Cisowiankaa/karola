@@ -270,6 +270,9 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
 
 
 
+
+
+
 <!-- BDSM_RUNTIME_INLINE_START -->
 <script>
 (()=>{
@@ -666,68 +669,51 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
 (()=>{
   if(window.__bdsmOffencesInstalled)return;
   window.__bdsmOffencesInstalled=true;
-  const KEY='bdsm-app-offences-v1';
-  const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'[]')}catch(_){return[]}};
+  const KEY='bdsm-app-offences-v1',EVENTS='bdsm-app-events-v3',TASKS='bdsm-app-education-tasks-v1',NOTES='bdsm-app-written-notes-v1',LINKS='bdsm-app-event-offence-links-v1';
+  const readKey=(k,d)=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch(_){return d}};
+  const read=()=>{const x=readKey(KEY,[]);return Array.isArray(x)?x:[]};
   const write=v=>localStorage.setItem(KEY,JSON.stringify(v));
   const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
   const nowLocal=()=>{const d=new Date(),z=n=>String(n).padStart(2,'0');return `${d.getFullYear()}-${z(d.getMonth()+1)}-${z(d.getDate())}T${z(d.getHours())}:${z(d.getMinutes())}`};
-  function uid(){return 'PRZ-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase()}
+  const uid=()=> 'PRZ-'+Date.now().toString(36).toUpperCase()+'-'+Math.random().toString(36).slice(2,6).toUpperCase();
+  let filters={status:'all',category:'all',severity:'all',query:''};
+  const addHistory=(x,action,detail='')=>{x.history=Array.isArray(x.history)?x.history:[];x.history.unshift({at:new Date().toISOString(),action,detail});x.updated_at=new Date().toISOString()};
+  function linkedFor(id){
+    const events=readKey(EVENTS,[]),tasks=readKey(TASKS,[]),notes=readKey(NOTES,[]),map=readKey(LINKS,{});
+    const ev=events.filter(e=>e.offence_id===id||e.przewinienie_id===id||map[e.event_id||e.id]===id||(Array.isArray(e.linked_ids)&&e.linked_ids.includes(id)));
+    const ta=tasks.filter(t=>t.offence_id===id||t.przewinienie_id===id||(Array.isArray(t.linked_ids)&&t.linked_ids.includes(id)));
+    const no=notes.filter(n=>n.offence_id===id||n.przewinienie_id===id||(Array.isArray(n.linked_ids)&&n.linked_ids.includes(id)));
+    return{events:ev,tasks:ta,notes:no};
+  }
   function ensureUI(){
-    const nav=document.querySelector('#nav'),content=document.querySelector('.content');
-    if(!nav||!content)return;
-    if(!document.querySelector('#offencesNav')){
-      const b=document.createElement('button');b.id='offencesNav';b.type='button';b.dataset.view='offences';b.innerHTML='⚠ Przewinienia';
-      const history=[...nav.querySelectorAll('button')].find(x=>x.dataset.view==='history');
-      if(history)nav.insertBefore(b,history);else nav.appendChild(b);
-      b.addEventListener('click',e=>{e.preventDefault();openView()});
-    }
+    const nav=document.querySelector('#nav'),content=document.querySelector('.content');if(!nav||!content)return;
+    if(!document.querySelector('#offencesNav')){const b=document.createElement('button');b.id='offencesNav';b.type='button';b.dataset.view='offences';b.innerHTML='⚠ Przewinienia';const history=[...nav.querySelectorAll('button')].find(x=>x.dataset.view==='history');history?nav.insertBefore(b,history):nav.appendChild(b);b.onclick=e=>{e.preventDefault();openView()}}
+    if(!document.querySelector('#offencesStyles')){const st=document.createElement('style');st.id='offencesStyles';st.textContent='.off-filters{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.off-filters select,.off-filters input{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:8px}.off-links{display:flex;gap:5px;flex-wrap:wrap}.off-chip{font-size:10px;border:1px solid #313b4f;border-radius:999px;padding:4px 7px}.off-history{margin-top:8px;padding:8px;border-left:2px solid #394258;color:#9da7b7;font-size:11px}.off-history div{margin:3px 0}.off-actions{display:flex;gap:6px;flex-wrap:wrap}';document.head.appendChild(st)}
     if(!document.querySelector('#view-offences')){
-      const s=document.createElement('section');s.id='view-offences';s.className='hidden';
-      s.innerHTML=`<div class="panel"><h3>⚠ Przewinienia</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Rejestr przewinień gotowy do późniejszego powiązania z punktami, karami, szlabanami i raportami. Powiązania nie uruchamiają konsekwencji automatycznie.</p><div class="form-grid"><div class="field"><label>Nazwa / tytuł</label><input id="offTitle" placeholder="np. Spóźnienie"></div><div class="field"><label>Kategoria</label><select id="offCategory"><option>zasady</option><option>obowiązki</option><option>komunikacja</option><option>punktualność</option><option>inne</option></select></div><div class="field"><label>Waga</label><select id="offSeverity"><option value="lekka">Lekka</option><option value="średnia">Średnia</option><option value="poważna">Poważna</option></select></div><div class="field"><label>Status</label><select id="offStatus"><option value="otwarte">Otwarte</option><option value="wyjaśnione">Wyjaśnione</option><option value="zamknięte">Zamknięte</option><option value="anulowane">Anulowane</option></select></div><div class="field"><label>Data i godzina</label><input id="offWhen" type="datetime-local"></div><div class="field"><label>Powiązane ID (opcjonalnie)</label><input id="offLinks" placeholder="np. EVT-123, KARA-7"></div><div class="field span3"><label>Opis</label><textarea id="offDesc" placeholder="Krótki opis sytuacji"></textarea></div></div><div class="actions"><button class="btn primary" id="offSave">Dodaj przewinienie</button></div><div id="offStats" style="margin:14px 0 6px"></div><div id="offTable"></div></div>`;
-      content.appendChild(s);
-      s.querySelector('#offWhen').value=nowLocal();
-      s.querySelector('#offSave').addEventListener('click',saveOffence);
-      s.addEventListener('click',e=>{const x=e.target.closest('[data-off-close]');if(x)closeOffence(x.dataset.offClose);const d=e.target.closest('[data-off-delete]');if(d)deleteOffence(d.dataset.offDelete)});
+      const s=document.createElement('section');s.id='view-offences';s.className='hidden';s.innerHTML=`<div class="panel"><h3>⚠ Przewinienia</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Rejestr uzgodnionych wpisów. Powiązania służą dokumentacji i nie uruchamiają automatycznych konsekwencji.</p><div class="form-grid"><div class="field"><label>Nazwa / tytuł</label><input id="offTitle"></div><div class="field"><label>Kategoria</label><select id="offCategory"><option>zasady</option><option>obowiązki</option><option>komunikacja</option><option>punktualność</option><option>inne</option></select></div><div class="field"><label>Waga</label><select id="offSeverity"><option value="lekka">Lekka</option><option value="średnia">Średnia</option><option value="poważna">Poważna</option></select></div><div class="field"><label>Status</label><select id="offStatus"><option value="otwarte">Otwarte</option><option value="wyjaśnione">Wyjaśnione</option><option value="zamknięte">Zamknięte</option><option value="anulowane">Anulowane</option></select></div><div class="field"><label>Data i godzina</label><input id="offWhen" type="datetime-local"></div><div class="field"><label>Powiązane ID</label><input id="offLinks" placeholder="np. EVT-123"></div><div class="field span3"><label>Opis</label><textarea id="offDesc"></textarea></div></div><div class="actions"><button class="btn primary" id="offSave">Dodaj przewinienie</button></div><div class="off-filters"><select id="offFilterStatus"><option value="all">Wszystkie statusy</option><option value="otwarte">Otwarte</option><option value="wyjaśnione">Wyjaśnione</option><option value="zamknięte">Zamknięte</option><option value="anulowane">Anulowane</option></select><select id="offFilterCategory"><option value="all">Wszystkie kategorie</option><option>zasady</option><option>obowiązki</option><option>komunikacja</option><option>punktualność</option><option>inne</option></select><select id="offFilterSeverity"><option value="all">Każda waga</option><option value="lekka">Lekka</option><option value="średnia">Średnia</option><option value="poważna">Poważna</option></select><input id="offFilterQuery" placeholder="Szukaj po nazwie lub ID"></div><div id="offStats" style="margin:14px 0 6px"></div><div id="offTable"></div></div>`;content.appendChild(s);
+      s.querySelector('#offWhen').value=nowLocal();s.querySelector('#offSave').onclick=saveOffence;
+      ['Status','Category','Severity'].forEach(k=>s.querySelector('#offFilter'+k).onchange=e=>{filters[k.toLowerCase()]=e.target.value;render()});s.querySelector('#offFilterQuery').oninput=e=>{filters.query=e.target.value.toLowerCase();render()};
+      s.onclick=e=>{const c=e.target.closest('[data-off-close]');if(c)changeStatus(c.dataset.offClose,'zamknięte');const r=e.target.closest('[data-off-reopen]');if(r)changeStatus(r.dataset.offReopen,'otwarte');const d=e.target.closest('[data-off-delete]');if(d)deleteOffence(d.dataset.offDelete)};
     }
   }
-  function openView(){
-    ensureUI();
-    document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));
-    const s=document.querySelector('#view-offences');if(s)s.classList.remove('hidden');
-    document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));
-    const b=document.querySelector('#offencesNav');if(b)b.classList.add('active');
-    render();
-  }
+  function openView(){ensureUI();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-offences')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#offencesNav')?.classList.add('active');render()}
   function saveOffence(){
     const title=document.querySelector('#offTitle')?.value.trim();if(!title)return;
-    const item={
-      offence_id:uid(),
-      title,
-      category:document.querySelector('#offCategory')?.value||'inne',
-      severity:document.querySelector('#offSeverity')?.value||'lekka',
-      status:document.querySelector('#offStatus')?.value||'otwarte',
-      occurred_at:document.querySelector('#offWhen')?.value?new Date(document.querySelector('#offWhen').value).toISOString():new Date().toISOString(),
-      description:document.querySelector('#offDesc')?.value.trim()||'',
-      linked_ids:(document.querySelector('#offLinks')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),
-      created_at:new Date().toISOString(),updated_at:new Date().toISOString()
-    };
-    const data=read();data.unshift(item);write(data);
-    document.querySelector('#offTitle').value='';document.querySelector('#offDesc').value='';document.querySelector('#offLinks').value='';document.querySelector('#offWhen').value=nowLocal();render();
-    document.dispatchEvent(new CustomEvent('bdsm-offences-updated',{detail:{offence_id:item.offence_id}}));
+    const item={offence_id:uid(),title,category:document.querySelector('#offCategory')?.value||'inne',severity:document.querySelector('#offSeverity')?.value||'lekka',status:document.querySelector('#offStatus')?.value||'otwarte',occurred_at:document.querySelector('#offWhen')?.value?new Date(document.querySelector('#offWhen').value).toISOString():new Date().toISOString(),description:document.querySelector('#offDesc')?.value.trim()||'',linked_ids:(document.querySelector('#offLinks')?.value||'').split(',').map(x=>x.trim()).filter(Boolean),created_at:new Date().toISOString(),updated_at:new Date().toISOString(),history:[]};
+    addHistory(item,'utworzono','Dodano przewinienie');const data=read();data.unshift(item);write(data);['#offTitle','#offDesc','#offLinks'].forEach(q=>document.querySelector(q).value='');document.querySelector('#offWhen').value=nowLocal();render();document.dispatchEvent(new CustomEvent('bdsm-offences-updated',{detail:{offence_id:item.offence_id}}));
   }
-  function closeOffence(id){const data=read(),x=data.find(v=>v.offence_id===id);if(x){x.status='zamknięte';x.updated_at=new Date().toISOString();write(data);render()}}
-  function deleteOffence(id){write(read().filter(x=>x.offence_id!==id));render()}
+  function changeStatus(id,status){const data=read(),x=data.find(v=>v.offence_id===id);if(!x)return;const old=x.status;x.status=status;addHistory(x,'zmiana statusu',`${old||'—'} → ${status}`);write(data);render();document.dispatchEvent(new CustomEvent('bdsm-offences-updated',{detail:{offence_id:id}}))}
+  function deleteOffence(id){const data=read(),x=data.find(v=>v.offence_id===id);if(!x)return;if(linkedFor(id).events.length+linkedFor(id).tasks.length+linkedFor(id).notes.length>0){x.status='anulowane';addHistory(x,'anulowano','Wpis zachowany z powodu istniejących powiązań');write(data)}else write(data.filter(x=>x.offence_id!==id));render();document.dispatchEvent(new CustomEvent('bdsm-offences-updated',{detail:{offence_id:id}}))}
+  function visible(data){return data.filter(x=>(filters.status==='all'||x.status===filters.status)&&(filters.category==='all'||x.category===filters.category)&&(filters.severity==='all'||x.severity===filters.severity)&&(!filters.query||`${x.offence_id} ${x.title} ${x.description}`.toLowerCase().includes(filters.query)))}
   function render(){
-    const data=read(),table=document.querySelector('#offTable'),stats=document.querySelector('#offStats');if(!table)return;
-    const open=data.filter(x=>x.status==='otwarte').length;
-    if(stats)stats.innerHTML=`Łącznie: <strong>${data.length}</strong> &nbsp; Otwarte: <strong>${open}</strong> &nbsp; Zamknięte: <strong>${data.filter(x=>x.status==='zamknięte').length}</strong>`;
-    if(!data.length){table.innerHTML='<div class="empty">Brak przewinień.</div>';return;}
-    table.innerHTML=`<div style="overflow:auto"><table class="table"><thead><tr><th>ID</th><th>Data</th><th>Przewinienie</th><th>Kategoria</th><th>Waga</th><th>Status</th><th>Powiązania</th><th>Akcja</th></tr></thead><tbody>${data.map(x=>`<tr><td style="font-family:monospace;font-size:11px">${esc(x.offence_id)}</td><td>${new Date(x.occurred_at).toLocaleString('pl-PL')}</td><td><strong>${esc(x.title)}</strong>${x.description?`<div style="color:#98a2b3;margin-top:3px">${esc(x.description)}</div>`:''}</td><td>${esc(x.category)}</td><td>${esc(x.severity)}</td><td>${esc(x.status)}</td><td>${x.linked_ids?.length?x.linked_ids.map(esc).join(', '):'—'}</td><td>${x.status!=='zamknięte'?`<button class="btn" data-off-close="${esc(x.offence_id)}">Zamknij</button>`:''} <button class="btn danger" data-off-delete="${esc(x.offence_id)}">Usuń</button></td></tr>`).join('')}</tbody></table></div>`;
+    const data=read(),rows=visible(data),table=document.querySelector('#offTable'),stats=document.querySelector('#offStats');if(!table)return;
+    if(stats)stats.innerHTML=`Łącznie: <strong>${data.length}</strong> &nbsp; Otwarte: <strong>${data.filter(x=>x.status==='otwarte').length}</strong> &nbsp; Zamknięte: <strong>${data.filter(x=>x.status==='zamknięte').length}</strong> &nbsp; Widoczne: <strong>${rows.length}</strong>`;
+    if(!rows.length){table.innerHTML='<div class="empty">Brak przewinień dla wybranych filtrów.</div>';return}
+    table.innerHTML=`<div style="overflow:auto"><table class="table"><thead><tr><th>ID / data</th><th>Przewinienie</th><th>Kategoria</th><th>Waga</th><th>Status</th><th>Powiązania</th><th>Historia</th><th>Akcja</th></tr></thead><tbody>${rows.map(x=>{const l=linkedFor(x.offence_id),hist=(x.history||[]).slice(0,4);return `<tr><td><code>${esc(x.offence_id)}</code><br><small>${new Date(x.occurred_at).toLocaleString('pl-PL')}</small></td><td><strong>${esc(x.title)}</strong>${x.description?`<div style="color:#98a2b3;margin-top:3px">${esc(x.description)}</div>`:''}</td><td>${esc(x.category)}</td><td>${esc(x.severity)}</td><td>${esc(x.status)}</td><td><div class="off-links"><span class="off-chip">⚖ ${l.events.length} wydarzeń</span><span class="off-chip">📚 ${l.tasks.length} zadań</span><span class="off-chip">📝 ${l.notes.length} uwag</span></div>${x.linked_ids?.length?`<small>${x.linked_ids.map(esc).join(', ')}</small>`:''}</td><td><div class="off-history">${hist.length?hist.map(h=>`<div>${new Date(h.at).toLocaleString('pl-PL')} • ${esc(h.action)}${h.detail?' • '+esc(h.detail):''}</div>`).join(''):'Brak zmian'}</div></td><td><div class="off-actions">${x.status==='zamknięte'?`<button class="btn" data-off-reopen="${esc(x.offence_id)}">Otwórz ponownie</button>`:`<button class="btn" data-off-close="${esc(x.offence_id)}">Zamknij</button>`}<button class="btn danger" data-off-delete="${esc(x.offence_id)}">${(l.events.length+l.tasks.length+l.notes.length)?'Anuluj':'Usuń'}</button></div></td></tr>`}).join('')}</tbody></table></div>`;
   }
-  function install(){ensureUI();render();window.bdsmOffences={list:read,open:openView};}
+  function install(){ensureUI();render();window.bdsmOffences={list:read,open:openView,linkedFor};}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
-
 </script>
 <script>
 (()=>{
