@@ -355,6 +355,9 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
 
 </script>
 
+
+
+
 <!-- BDSM_RUNTIME_INLINE_START -->
 <script>
 (()=>{
@@ -1293,7 +1296,57 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
     const counts={done:0,not_done:0,carried:0};days.forEach(d=>{const o=notes[isoDay(d)]?.outcome;if(counts[o]!==undefined)counts[o]++});
     const dayHtml=days.map(d=>{const items=itemsFor(d),key=isoDay(d),isDone=!!done[key],n=notes[key]||{};return `<section><h2>${esc(d.toLocaleDateString('pl-PL',{weekday:'long',day:'2-digit',month:'2-digit',year:'numeric'}))}${isDone?' — dzień zakończony':''}</h2><p><strong>Cel:</strong> ${esc(n.goal||'—')}</p><p><strong>Notatka:</strong> ${esc(n.note||'—')}</p><p><strong>Podsumowanie:</strong> ${esc(statusLabel(n.outcome))}${n.carried_from?` • przeniesiono z ${esc(n.carried_from)}`:''}</p>${items.length?`<table><thead><tr><th>Godzina</th><th>Typ</th><th>Pozycja</th><th>Informacja</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.time)}</td><td>${x.kind==='task'?'Zadanie':x.kind==='szlaban'?'Szlaban':'Kara'}</td><td>${esc(x.title)}</td><td>${esc(x.meta)}</td></tr>`).join('')}</tbody></table>`:'<p>Brak wpisów.</p>'}</section>`}).join('');
     const review=`<section><h2>Podsumowanie tygodnia</h2><p><strong>Wnioski:</strong> ${esc(wr.conclusions||'—')}</p><p><strong>Plan na kolejny tydzień:</strong> ${esc(wr.next_plan||'—')}</p></section>`;
-    const w=window.open('','_blank');if(!w)return;w.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Plan tygodnia ${esc(fmtFull(start))}</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;color:#111;font-size:11px}h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 7px;border-bottom:1px solid #bbb;padding-bottom:4px}.meta{color:#555;margin-bottom:15px}.summary{padding:8px;border:1px solid #bbb;margin:10px 0}table{width:100%;border-collapse:collapse;margin:6px 0 12px}th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top}th{background:#f1f1f1}section{break-inside:avoid}</style></head><body><h1>Plan tygodnia</h1><div class="meta">${esc(fmtFull(start))} – ${esc(fmtFull(addDays(start,6)))}</div><div class="summary">Wykonane: <strong>${counts.done}</strong> &nbsp; Niewykonane: <strong>${counts.not_done}</strong> &nbsp; Przeniesione: <strong>${counts.carried}</strong></div>${dayHtml}${review}<script>window.onload=()=>setTimeout(()=>window.print(),200)<\/script></body></html>`);w.document.close();
+    const w=window.open('','_blank');if(!w)return;w.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Plan tygodnia ${esc(fmtFull(start))}</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;color:#111;font-size:11px}h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 7px;border-bottom:1px solid #bbb;padding-bottom:4px}.meta{color:#555;margin-bottom:15px}.summary{padding:8px;border:1px solid #bbb;margin:10px 0}table{width:100%;border-collapse:collapse;margin:6px 0 12px}th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top}th{background:#f1f1f1}section{break-inside:avoid}</style></head><body><h1>Plan tygodnia</h1><div class="meta">${esc(fmtFull(start))} – ${esc(fmtFull(addDays(start,6)))}</div><div class="summary">Wykonane: <strong>${counts.done}</strong> &nbsp; Niewykonane: <strong>${counts.not_done}</strong> &nbsp; Przeniesione: <strong>${counts.carried}</strong></div>${dayHtml}${review}<script>window.onload=()=>setTimeout(()=>window.print(),200)<\/script><script>
+(()=>{
+  if(window.__bdsmGlobalSearchInstalled)return;
+  window.__bdsmGlobalSearchInstalled=true;
+  const STORES={
+    event:'bdsm-app-events-v3',
+    offence:'bdsm-app-offences-v1',
+    task:'bdsm-app-education-tasks-v1',
+    note:'bdsm-app-written-notes-v1',
+    hour:'bdsm-app-hourly-reports-v1'
+  };
+  const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const when=x=>x.occurred_at||x.issued_at||x.due_at||x.start||x.date||x.created_at||x.updated_at||'';
+  const id=x=>x.event_id||x.id||x.offence_id||x.przewinienie_id||x.task_id||x.note_id||x.report_id||'';
+  const title=x=>x.title||x.type||x.text||'Bez tytułu';
+  const meta=x=>[x.status,x.category,x.severity,x.type,x.description,x.body,x.note].filter(Boolean).join(' • ');
+  function all(){
+    const out=[];
+    Object.entries(STORES).forEach(([kind,key])=>read(key,[]).forEach(x=>out.push({kind,raw:x,id:id(x),title:title(x),meta:meta(x),when:when(x)})));
+    return out.sort((a,b)=>new Date(b.when||0)-new Date(a.when||0));
+  }
+  const labels={event:'Wydarzenie',offence:'Przewinienie',task:'Zadanie',note:'Uwaga / upomnienie',hour:'Dziennik godzinowy'};
+  const icons={event:'⚖',offence:'⚠',task:'📚',note:'📝',hour:'🕐'};
+  function openItem(kind,id){
+    if(kind==='offence'){window.bdsmRelationshipTimeline?.openCase?.(id)||window.bdsmOffences?.open?.();return}
+    if(kind==='task'){window.bdsmEducationTasks?.open?.();return}
+    if(kind==='note'){window.bdsmWrittenNotes?.open?.();return}
+    if(kind==='hour'){window.bdsmHourlyReports?.open?.();return}
+    if(kind==='event'){document.querySelector('#deadlinesNav')?.click();return}
+  }
+  function render(){
+    const q=norm(document.querySelector('#globalSearchInput')?.value||''),type=document.querySelector('#globalSearchType')?.value||'all',box=document.querySelector('#globalSearchResults');if(!box)return;
+    let rows=all();if(type!=='all')rows=rows.filter(x=>x.kind===type);if(q)rows=rows.filter(x=>norm(`${x.id} ${x.title} ${x.meta}`).includes(q));
+    document.querySelector('#globalSearchCount').textContent=`${rows.length} wyników`;
+    box.innerHTML=rows.length?rows.slice(0,200).map(x=>`<button class="gs-row" type="button" data-gs-kind="${esc(x.kind)}" data-gs-id="${esc(x.id)}"><span class="gs-icon">${icons[x.kind]}</span><span><strong>${esc(x.title)}</strong><small>${esc(labels[x.kind])}${x.id?' • '+esc(x.id):''}${x.meta?' • '+esc(x.meta):''}</small></span><time>${x.when?esc(new Date(x.when).toLocaleString('pl-PL')):'—'}</time></button>`).join(''):'<div class="empty">Brak wyników.</div>';
+  }
+  function ensure(){
+    const nav=document.querySelector('#nav'),content=document.querySelector('.content');if(!nav||!content)return;
+    if(!document.querySelector('#globalSearchNav')){const b=document.createElement('button');b.id='globalSearchNav';b.type='button';b.dataset.view='global-search';b.innerHTML='🔎 Wyszukiwanie';nav.appendChild(b);b.onclick=e=>{e.preventDefault();open()}}
+    if(!document.querySelector('#globalSearchStyles')){const st=document.createElement('style');st.id='globalSearchStyles';st.textContent='.gs-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.gs-toolbar input,.gs-toolbar select{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:10px}.gs-toolbar input{flex:1;min-width:260px}.gs-row{width:100%;display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;text-align:left;padding:11px;border:0;border-bottom:1px solid #222a39;background:transparent;color:inherit;cursor:pointer}.gs-row:hover{background:#111827}.gs-row small{display:block;color:#98a2b3;margin-top:3px}.gs-row time{font-size:11px;color:#98a2b3}.gs-icon{font-size:20px}@media(max-width:700px){.gs-row{grid-template-columns:32px 1fr}.gs-row time{grid-column:2}}';document.head.appendChild(st)}
+    if(!document.querySelector('#view-global-search')){const s=document.createElement('section');s.id='view-global-search';s.className='hidden';s.innerHTML='<div class="panel"><h3>🔎 Wyszukiwanie</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Przeszukuje lokalne dane aplikacji. Wyniki są tylko informacyjne i nie zmieniają żadnych wpisów.</p><div class="gs-toolbar"><input id="globalSearchInput" type="search" placeholder="Szukaj po tytule, opisie, statusie lub ID"><select id="globalSearchType"><option value="all">Wszystko</option><option value="offence">Przewinienia</option><option value="task">Zadania</option><option value="note">Uwagi / upomnienia</option><option value="event">Wydarzenia</option><option value="hour">Dziennik godzinowy</option></select><span id="globalSearchCount" class="mc-pill">0 wyników</span></div><div id="globalSearchResults"></div></div>';content.appendChild(s);s.querySelector('#globalSearchInput').oninput=render;s.querySelector('#globalSearchType').onchange=render;s.onclick=e=>{const r=e.target.closest('[data-gs-kind]');if(r)openItem(r.dataset.gsKind,r.dataset.gsId)}}
+  }
+  function open(){ensure();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-global-search')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#globalSearchNav')?.classList.add('active');render();setTimeout(()=>document.querySelector('#globalSearchInput')?.focus(),0)}
+  function install(){ensure();window.bdsmGlobalSearch={open,render};['bdsm-offences-updated','bdsm-education-tasks-updated','bdsm-written-notes-updated','bdsm-hourly-reports-updated','bdsm-sync-complete'].forEach(e=>document.addEventListener(e,render));window.addEventListener('storage',render)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+</script>
+</body></html>`);w.document.close();
   }
 
   function openView(){ensureUI();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-weekly-plan')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#weeklyPlanNav')?.classList.add('active');render()}
@@ -1374,7 +1427,57 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
   }
   function render(){ensureUI();const byDay=monthData(),y=cursor.getFullYear(),m=cursor.getMonth(),first=new Date(y,m,1,12),offset=(first.getDay()+6)%7,start=new Date(y,m,1-offset,12),today=keyOf(new Date()),c=counts(byDay);const title=document.querySelector('#mcTitle'),sum=document.querySelector('#mcSummary'),grid=document.querySelector('#mcGrid');if(title)title.textContent=cursor.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});if(sum)sum.innerHTML=`<span class="mc-pill clickable" data-mc-quick="all">Łącznie: <strong>${c.all}</strong></span><span class="mc-pill clickable" data-mc-quick="offence">⚠ Przewinienia: <strong>${c.off}</strong></span><span class="mc-pill clickable" data-mc-quick="task">📚 Zadania: <strong>${c.tasks}</strong></span><span class="mc-pill clickable" data-mc-quick="event">⚖/⊘ Terminy: <strong>${c.events}</strong></span><span class="mc-pill clickable" data-mc-quick="hour">🕐 Dziennik: <strong>${c.hours}</strong></span><span class="mc-pill clickable" data-mc-quick="overdue">⏰ Po terminie: <strong>${c.overdue}</strong></span><span class="mc-pill">Filtr: <strong>${esc(labels[filter]||'Wszystko')}</strong> • ${esc(statusLabels[statusFilter]||'')}</span>`;if(grid)grid.innerHTML=Array.from({length:42},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);const k=keyOf(d),items=filteredItems(byDay[k]||[]),out=d.getMonth()!==m;return `<div class="mc-day ${out?'out':''} ${k===today?'today':''} ${k===selected?'selected':''}" data-mc-date="${k}"><div class="mc-num">${d.getDate()}</div><div class="mc-dots">${items.slice(0,4).map(x=>`<span class="mc-dot ${x.overdue?'overdue':''}">${x.icon} ${esc(x.time||'')}</span>`).join('')}</div>${items.length>4?`<div class="mc-more">+${items.length-4} więcej</div>`:''}</div>`}).join('');renderDetail(byDay)}
   function renderDetail(byDay){const box=document.querySelector('#mcDetail');if(!box)return;if(!selected){box.innerHTML='<h3>Szczegóły dnia</h3><div class="empty">Kliknij dzień w kalendarzu.</div>';return}const items=filteredItems(byDay[selected]||[]);box.innerHTML=`<h3>Szczegóły: ${esc(new Date(selected+'T12:00:00').toLocaleDateString('pl-PL',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}</h3>${items.length?items.map(x=>`<div class="mc-row"><strong>${esc(x.time||'—')}</strong><span>${x.icon}</span><div><strong>${esc(x.title)}</strong>${x.overdue?' <span class="mc-overdue">• po terminie</span>':''}<br><small>${esc(x.meta||'')}</small></div><button class="btn" data-mc-open="${x.kind}" data-mc-id="${esc(x.id)}">Otwórz</button></div>`).join(''):'<div class="empty">Brak wpisów dla wybranych filtrów.</div>'}`}
-  function printMonth(){const byDay=monthData(),y=cursor.getFullYear(),m=cursor.getMonth(),days=new Date(y,m+1,0).getDate(),rows=[];for(let day=1;day<=days;day++){const d=new Date(y,m,day,12),k=keyOf(d),items=filteredItems(byDay[k]||[]);if(!items.length)continue;rows.push(`<section><h2>${esc(d.toLocaleDateString('pl-PL',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}</h2><table><thead><tr><th>Godzina</th><th>Typ</th><th>Pozycja</th><th>Status / informacja</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.time||'—')}</td><td>${esc(x.kind==='offence'?'Przewinienie':x.kind==='task'?'Zadanie':x.kind==='event'?'Kara / szlaban':'Dziennik')}</td><td>${esc(x.title)}</td><td>${esc((x.overdue?'PO TERMINIE • ':'')+(x.meta||''))}</td></tr>`).join('')}</tbody></table></section>`)}const w=window.open('','_blank');if(!w)return;const label=cursor.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});w.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Kalendarz miesiąca ${esc(label)}</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;color:#111;font-size:11px}h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 7px;border-bottom:1px solid #bbb;padding-bottom:4px}.meta{color:#555;margin-bottom:15px}table{width:100%;border-collapse:collapse;margin:6px 0 12px}th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top}th{background:#f1f1f1}section{break-inside:avoid}</style></head><body><h1>Kalendarz miesiąca</h1><div class="meta">${esc(label)} • typ: ${esc(labels[filter]||'Wszystko')} • status: ${esc(statusLabels[statusFilter]||'Wszystkie statusy')} • wyszukiwanie: ${esc(searchText||'—')}</div>${rows.length?rows.join(''):'<p>Brak wpisów dla wybranych filtrów.</p>'}<script>window.onload=()=>setTimeout(()=>window.print(),200)<\/script></body></html>`);w.document.close()}
+  function printMonth(){const byDay=monthData(),y=cursor.getFullYear(),m=cursor.getMonth(),days=new Date(y,m+1,0).getDate(),rows=[];for(let day=1;day<=days;day++){const d=new Date(y,m,day,12),k=keyOf(d),items=filteredItems(byDay[k]||[]);if(!items.length)continue;rows.push(`<section><h2>${esc(d.toLocaleDateString('pl-PL',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}))}</h2><table><thead><tr><th>Godzina</th><th>Typ</th><th>Pozycja</th><th>Status / informacja</th></tr></thead><tbody>${items.map(x=>`<tr><td>${esc(x.time||'—')}</td><td>${esc(x.kind==='offence'?'Przewinienie':x.kind==='task'?'Zadanie':x.kind==='event'?'Kara / szlaban':'Dziennik')}</td><td>${esc(x.title)}</td><td>${esc((x.overdue?'PO TERMINIE • ':'')+(x.meta||''))}</td></tr>`).join('')}</tbody></table></section>`)}const w=window.open('','_blank');if(!w)return;const label=cursor.toLocaleDateString('pl-PL',{month:'long',year:'numeric'});w.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Kalendarz miesiąca ${esc(label)}</title><style>@page{size:A4;margin:15mm}body{font-family:Arial,sans-serif;color:#111;font-size:11px}h1{font-size:20px;margin:0 0 4px}h2{font-size:14px;margin:18px 0 7px;border-bottom:1px solid #bbb;padding-bottom:4px}.meta{color:#555;margin-bottom:15px}table{width:100%;border-collapse:collapse;margin:6px 0 12px}th,td{border:1px solid #bbb;padding:6px;text-align:left;vertical-align:top}th{background:#f1f1f1}section{break-inside:avoid}</style></head><body><h1>Kalendarz miesiąca</h1><div class="meta">${esc(label)} • typ: ${esc(labels[filter]||'Wszystko')} • status: ${esc(statusLabels[statusFilter]||'Wszystkie statusy')} • wyszukiwanie: ${esc(searchText||'—')}</div>${rows.length?rows.join(''):'<p>Brak wpisów dla wybranych filtrów.</p>'}<script>window.onload=()=>setTimeout(()=>window.print(),200)<\/script><script>
+(()=>{
+  if(window.__bdsmGlobalSearchInstalled)return;
+  window.__bdsmGlobalSearchInstalled=true;
+  const STORES={
+    event:'bdsm-app-events-v3',
+    offence:'bdsm-app-offences-v1',
+    task:'bdsm-app-education-tasks-v1',
+    note:'bdsm-app-written-notes-v1',
+    hour:'bdsm-app-hourly-reports-v1'
+  };
+  const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const when=x=>x.occurred_at||x.issued_at||x.due_at||x.start||x.date||x.created_at||x.updated_at||'';
+  const id=x=>x.event_id||x.id||x.offence_id||x.przewinienie_id||x.task_id||x.note_id||x.report_id||'';
+  const title=x=>x.title||x.type||x.text||'Bez tytułu';
+  const meta=x=>[x.status,x.category,x.severity,x.type,x.description,x.body,x.note].filter(Boolean).join(' • ');
+  function all(){
+    const out=[];
+    Object.entries(STORES).forEach(([kind,key])=>read(key,[]).forEach(x=>out.push({kind,raw:x,id:id(x),title:title(x),meta:meta(x),when:when(x)})));
+    return out.sort((a,b)=>new Date(b.when||0)-new Date(a.when||0));
+  }
+  const labels={event:'Wydarzenie',offence:'Przewinienie',task:'Zadanie',note:'Uwaga / upomnienie',hour:'Dziennik godzinowy'};
+  const icons={event:'⚖',offence:'⚠',task:'📚',note:'📝',hour:'🕐'};
+  function openItem(kind,id){
+    if(kind==='offence'){window.bdsmRelationshipTimeline?.openCase?.(id)||window.bdsmOffences?.open?.();return}
+    if(kind==='task'){window.bdsmEducationTasks?.open?.();return}
+    if(kind==='note'){window.bdsmWrittenNotes?.open?.();return}
+    if(kind==='hour'){window.bdsmHourlyReports?.open?.();return}
+    if(kind==='event'){document.querySelector('#deadlinesNav')?.click();return}
+  }
+  function render(){
+    const q=norm(document.querySelector('#globalSearchInput')?.value||''),type=document.querySelector('#globalSearchType')?.value||'all',box=document.querySelector('#globalSearchResults');if(!box)return;
+    let rows=all();if(type!=='all')rows=rows.filter(x=>x.kind===type);if(q)rows=rows.filter(x=>norm(`${x.id} ${x.title} ${x.meta}`).includes(q));
+    document.querySelector('#globalSearchCount').textContent=`${rows.length} wyników`;
+    box.innerHTML=rows.length?rows.slice(0,200).map(x=>`<button class="gs-row" type="button" data-gs-kind="${esc(x.kind)}" data-gs-id="${esc(x.id)}"><span class="gs-icon">${icons[x.kind]}</span><span><strong>${esc(x.title)}</strong><small>${esc(labels[x.kind])}${x.id?' • '+esc(x.id):''}${x.meta?' • '+esc(x.meta):''}</small></span><time>${x.when?esc(new Date(x.when).toLocaleString('pl-PL')):'—'}</time></button>`).join(''):'<div class="empty">Brak wyników.</div>';
+  }
+  function ensure(){
+    const nav=document.querySelector('#nav'),content=document.querySelector('.content');if(!nav||!content)return;
+    if(!document.querySelector('#globalSearchNav')){const b=document.createElement('button');b.id='globalSearchNav';b.type='button';b.dataset.view='global-search';b.innerHTML='🔎 Wyszukiwanie';nav.appendChild(b);b.onclick=e=>{e.preventDefault();open()}}
+    if(!document.querySelector('#globalSearchStyles')){const st=document.createElement('style');st.id='globalSearchStyles';st.textContent='.gs-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.gs-toolbar input,.gs-toolbar select{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:10px}.gs-toolbar input{flex:1;min-width:260px}.gs-row{width:100%;display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;text-align:left;padding:11px;border:0;border-bottom:1px solid #222a39;background:transparent;color:inherit;cursor:pointer}.gs-row:hover{background:#111827}.gs-row small{display:block;color:#98a2b3;margin-top:3px}.gs-row time{font-size:11px;color:#98a2b3}.gs-icon{font-size:20px}@media(max-width:700px){.gs-row{grid-template-columns:32px 1fr}.gs-row time{grid-column:2}}';document.head.appendChild(st)}
+    if(!document.querySelector('#view-global-search')){const s=document.createElement('section');s.id='view-global-search';s.className='hidden';s.innerHTML='<div class="panel"><h3>🔎 Wyszukiwanie</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Przeszukuje lokalne dane aplikacji. Wyniki są tylko informacyjne i nie zmieniają żadnych wpisów.</p><div class="gs-toolbar"><input id="globalSearchInput" type="search" placeholder="Szukaj po tytule, opisie, statusie lub ID"><select id="globalSearchType"><option value="all">Wszystko</option><option value="offence">Przewinienia</option><option value="task">Zadania</option><option value="note">Uwagi / upomnienia</option><option value="event">Wydarzenia</option><option value="hour">Dziennik godzinowy</option></select><span id="globalSearchCount" class="mc-pill">0 wyników</span></div><div id="globalSearchResults"></div></div>';content.appendChild(s);s.querySelector('#globalSearchInput').oninput=render;s.querySelector('#globalSearchType').onchange=render;s.onclick=e=>{const r=e.target.closest('[data-gs-kind]');if(r)openItem(r.dataset.gsKind,r.dataset.gsId)}}
+  }
+  function open(){ensure();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-global-search')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#globalSearchNav')?.classList.add('active');render();setTimeout(()=>document.querySelector('#globalSearchInput')?.focus(),0)}
+  function install(){ensure();window.bdsmGlobalSearch={open,render};['bdsm-offences-updated','bdsm-education-tasks-updated','bdsm-written-notes-updated','bdsm-hourly-reports-updated','bdsm-sync-complete'].forEach(e=>document.addEventListener(e,render));window.addEventListener('storage',render)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+</script>
+</body></html>`);w.document.close()}
   function openView(){ensureUI();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-month-calendar')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#monthCalendarNav')?.classList.add('active');render()}
   function install(){render();['bdsm-offences-updated','bdsm-education-tasks-updated','bdsm-hourly-reports-updated','bdsm-case-linked','bdsm-sync-complete'].forEach(ev=>document.addEventListener(ev,render));window.addEventListener('storage',render);setInterval(render,60000);window.bdsmMonthCalendar={open:openView,refresh:render,print:printMonth,setFilter:v=>{filter=v||'all';render()},setStatus:v=>{statusFilter=v||'all';render()},search:v=>{searchText=String(v||'');render()}};}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
@@ -1503,7 +1606,57 @@ function renderDetail(date){ensureDate(date);const x=reports().find(r=>r.date===
 function monthData(m){const events=read(EVENTS,[]).filter(e=>inMonth(e.start||e.created_at,m)),offences=read(OFF,[]).filter(x=>inMonth(x.occurred_at||x.created_at,m)),tasks=read(TASKS,[]).filter(x=>inMonth(x.due_at||x.created_at,m)),notes=read(NOTES,[]).filter(x=>inMonth(x.issued_at||x.date||x.created_at,m)),hours=read(HOURS,[]).filter(x=>String(x.date||'').slice(0,7)===m),days=reports().filter(x=>String(x.date||'').slice(0,7)===m).sort((a,b)=>a.date.localeCompare(b.date)),points=events.reduce((s,e)=>s+(Number(e.points_delta!=null?e.points_delta:(e.points!=null?e.points:0))||0),0);return{events,offences,tasks,notes,hours,days,points}}
 function renderMonthly(m){ensureStyles();const view=document.querySelector('#view-reports'),box=document.querySelector('#reportsView');if(!view||!box)return;const data=monthData(m),[y,mo]=m.split('-').map(Number),label=new Date(y,mo-1,1).toLocaleDateString('pl-PL',{month:'long',year:'numeric'}),count=t=>data.events.filter(e=>String(e.type||'').toLowerCase()===t).length,avg=data.days.length?Math.round(data.days.reduce((s,d)=>s+(Number(d.checklist_pct)||0),0)/data.days.length):0;box.innerHTML=`<div class="dr-head"><div><h3 style="margin-bottom:4px">📊 Raport miesięczny — ${esc(label)}</h3><div class="mr-muted">Pełne podsumowanie wybranego miesiąca.</div></div><div class="dr-toolbar"><input type="month" id="mrMonth" value="${esc(m)}"><button class="btn" id="mrOpen">Pokaż miesiąc</button><button class="btn" id="mrCurrent">Bieżący</button><button class="btn primary" id="mrPdf">📄 PDF miesiąca</button></div></div><div class="mr-grid"><div class="mr-card">⚠ Przewinienia<strong>${data.offences.length}</strong></div><div class="mr-card">📚 Zadania<strong>${data.tasks.length}</strong></div><div class="mr-card">📝 Uwagi<strong>${data.notes.length}</strong></div><div class="mr-card">🕐 Dziennik<strong>${data.hours.length}</strong></div><div class="mr-card">★ Punkty<strong>${data.points}</strong></div><div class="mr-card">✋ Spanking<strong>${count('spanking')}</strong></div><div class="mr-card">⚖ Kary<strong>${count('kara')}</strong></div><div class="mr-card">⊘ Szlabany<strong>${count('szlaban')}</strong></div><div class="mr-card">🎁 Nagrody<strong>${count('nagroda')}</strong></div><div class="mr-card">☑ Śr. checklisty<strong>${avg}%</strong></div></div>`;const mi=box.querySelector('#mrMonth');box.querySelector('#mrOpen').onclick=()=>mi.value&&renderMonthly(mi.value);box.querySelector('#mrCurrent').onclick=()=>renderMonthly(monthKey(new Date()));box.querySelector('#mrPdf').onclick=()=>printMonth(m);document.dispatchEvent(new CustomEvent('bdsm-month-report-rendered',{detail:{month:m,days:data.days}}))}
 function openMonthly(){catchUp();ensureStyles();showOnly('#view-reports',monthlyBtn());renderMonthly(monthKey(new Date()))}
-function printReport(date){const x=reports().find(r=>r.date===date);if(!x)return;const q=window.open('','_blank');if(!q)return;const label=new Date(date+'T12:00:00').toLocaleDateString('pl-PL',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}),rows=chronology(date);const entries=rows.length?rows.map(r=>`<div class="entry"><div class="time">${esc(r.time)}</div><div><b>${esc(r.title)}</b><div class="source">${esc(r.source)}</div>${r.meta?`<div>${esc(r.meta)}</div>`:''}${r.note?`<div class="note">${esc(r.note)}</div>`:''}</div></div>`).join(''):'<p>Brak wpisów.</p>';q.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Raport dzienny ${esc(date)}</title><style>body{font-family:Arial,sans-serif;color:#111;padding:28px;line-height:1.4}h1{margin-bottom:4px}.summary{padding:10px 0;border-bottom:1px solid #ccc}.entry{display:grid;grid-template-columns:58px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid #ddd}.time{font-weight:bold}.source{font-size:11px;color:#666}.note{white-space:pre-wrap;margin-top:4px}.muted{color:#666}@media print{button{display:none}}</style></head><body><h1>Raport dzienny</h1><div class="muted">${esc(label)}</div><div class="summary"><b>Przewinienia:</b> ${x.offences||0} &nbsp; <b>Zadania:</b> ${x.tasks||0} &nbsp; <b>Wpisy:</b> ${x.events||0} &nbsp; <b>Uwagi:</b> ${x.notes||0} &nbsp; <b>Dziennik:</b> ${x.hourly||0} &nbsp; <b>Punkty:</b> ${x.points||0}</div><h2>Plan dnia</h2><p>${esc(x.plan||'—')}</p><h2>Podsumowanie dnia</h2><p>${esc(x.summary||'—')}</p><h2>Chronologia dnia</h2>${entries}<script>onload=()=>setTimeout(()=>print(),200)<\/script></body></html>`);q.document.close()}
+function printReport(date){const x=reports().find(r=>r.date===date);if(!x)return;const q=window.open('','_blank');if(!q)return;const label=new Date(date+'T12:00:00').toLocaleDateString('pl-PL',{weekday:'long',day:'2-digit',month:'long',year:'numeric'}),rows=chronology(date);const entries=rows.length?rows.map(r=>`<div class="entry"><div class="time">${esc(r.time)}</div><div><b>${esc(r.title)}</b><div class="source">${esc(r.source)}</div>${r.meta?`<div>${esc(r.meta)}</div>`:''}${r.note?`<div class="note">${esc(r.note)}</div>`:''}</div></div>`).join(''):'<p>Brak wpisów.</p>';q.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Raport dzienny ${esc(date)}</title><style>body{font-family:Arial,sans-serif;color:#111;padding:28px;line-height:1.4}h1{margin-bottom:4px}.summary{padding:10px 0;border-bottom:1px solid #ccc}.entry{display:grid;grid-template-columns:58px 1fr;gap:12px;padding:9px 0;border-bottom:1px solid #ddd}.time{font-weight:bold}.source{font-size:11px;color:#666}.note{white-space:pre-wrap;margin-top:4px}.muted{color:#666}@media print{button{display:none}}</style></head><body><h1>Raport dzienny</h1><div class="muted">${esc(label)}</div><div class="summary"><b>Przewinienia:</b> ${x.offences||0} &nbsp; <b>Zadania:</b> ${x.tasks||0} &nbsp; <b>Wpisy:</b> ${x.events||0} &nbsp; <b>Uwagi:</b> ${x.notes||0} &nbsp; <b>Dziennik:</b> ${x.hourly||0} &nbsp; <b>Punkty:</b> ${x.points||0}</div><h2>Plan dnia</h2><p>${esc(x.plan||'—')}</p><h2>Podsumowanie dnia</h2><p>${esc(x.summary||'—')}</p><h2>Chronologia dnia</h2>${entries}<script>onload=()=>setTimeout(()=>print(),200)<\/script><script>
+(()=>{
+  if(window.__bdsmGlobalSearchInstalled)return;
+  window.__bdsmGlobalSearchInstalled=true;
+  const STORES={
+    event:'bdsm-app-events-v3',
+    offence:'bdsm-app-offences-v1',
+    task:'bdsm-app-education-tasks-v1',
+    note:'bdsm-app-written-notes-v1',
+    hour:'bdsm-app-hourly-reports-v1'
+  };
+  const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const when=x=>x.occurred_at||x.issued_at||x.due_at||x.start||x.date||x.created_at||x.updated_at||'';
+  const id=x=>x.event_id||x.id||x.offence_id||x.przewinienie_id||x.task_id||x.note_id||x.report_id||'';
+  const title=x=>x.title||x.type||x.text||'Bez tytułu';
+  const meta=x=>[x.status,x.category,x.severity,x.type,x.description,x.body,x.note].filter(Boolean).join(' • ');
+  function all(){
+    const out=[];
+    Object.entries(STORES).forEach(([kind,key])=>read(key,[]).forEach(x=>out.push({kind,raw:x,id:id(x),title:title(x),meta:meta(x),when:when(x)})));
+    return out.sort((a,b)=>new Date(b.when||0)-new Date(a.when||0));
+  }
+  const labels={event:'Wydarzenie',offence:'Przewinienie',task:'Zadanie',note:'Uwaga / upomnienie',hour:'Dziennik godzinowy'};
+  const icons={event:'⚖',offence:'⚠',task:'📚',note:'📝',hour:'🕐'};
+  function openItem(kind,id){
+    if(kind==='offence'){window.bdsmRelationshipTimeline?.openCase?.(id)||window.bdsmOffences?.open?.();return}
+    if(kind==='task'){window.bdsmEducationTasks?.open?.();return}
+    if(kind==='note'){window.bdsmWrittenNotes?.open?.();return}
+    if(kind==='hour'){window.bdsmHourlyReports?.open?.();return}
+    if(kind==='event'){document.querySelector('#deadlinesNav')?.click();return}
+  }
+  function render(){
+    const q=norm(document.querySelector('#globalSearchInput')?.value||''),type=document.querySelector('#globalSearchType')?.value||'all',box=document.querySelector('#globalSearchResults');if(!box)return;
+    let rows=all();if(type!=='all')rows=rows.filter(x=>x.kind===type);if(q)rows=rows.filter(x=>norm(`${x.id} ${x.title} ${x.meta}`).includes(q));
+    document.querySelector('#globalSearchCount').textContent=`${rows.length} wyników`;
+    box.innerHTML=rows.length?rows.slice(0,200).map(x=>`<button class="gs-row" type="button" data-gs-kind="${esc(x.kind)}" data-gs-id="${esc(x.id)}"><span class="gs-icon">${icons[x.kind]}</span><span><strong>${esc(x.title)}</strong><small>${esc(labels[x.kind])}${x.id?' • '+esc(x.id):''}${x.meta?' • '+esc(x.meta):''}</small></span><time>${x.when?esc(new Date(x.when).toLocaleString('pl-PL')):'—'}</time></button>`).join(''):'<div class="empty">Brak wyników.</div>';
+  }
+  function ensure(){
+    const nav=document.querySelector('#nav'),content=document.querySelector('.content');if(!nav||!content)return;
+    if(!document.querySelector('#globalSearchNav')){const b=document.createElement('button');b.id='globalSearchNav';b.type='button';b.dataset.view='global-search';b.innerHTML='🔎 Wyszukiwanie';nav.appendChild(b);b.onclick=e=>{e.preventDefault();open()}}
+    if(!document.querySelector('#globalSearchStyles')){const st=document.createElement('style');st.id='globalSearchStyles';st.textContent='.gs-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.gs-toolbar input,.gs-toolbar select{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:10px}.gs-toolbar input{flex:1;min-width:260px}.gs-row{width:100%;display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;text-align:left;padding:11px;border:0;border-bottom:1px solid #222a39;background:transparent;color:inherit;cursor:pointer}.gs-row:hover{background:#111827}.gs-row small{display:block;color:#98a2b3;margin-top:3px}.gs-row time{font-size:11px;color:#98a2b3}.gs-icon{font-size:20px}@media(max-width:700px){.gs-row{grid-template-columns:32px 1fr}.gs-row time{grid-column:2}}';document.head.appendChild(st)}
+    if(!document.querySelector('#view-global-search')){const s=document.createElement('section');s.id='view-global-search';s.className='hidden';s.innerHTML='<div class="panel"><h3>🔎 Wyszukiwanie</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Przeszukuje lokalne dane aplikacji. Wyniki są tylko informacyjne i nie zmieniają żadnych wpisów.</p><div class="gs-toolbar"><input id="globalSearchInput" type="search" placeholder="Szukaj po tytule, opisie, statusie lub ID"><select id="globalSearchType"><option value="all">Wszystko</option><option value="offence">Przewinienia</option><option value="task">Zadania</option><option value="note">Uwagi / upomnienia</option><option value="event">Wydarzenia</option><option value="hour">Dziennik godzinowy</option></select><span id="globalSearchCount" class="mc-pill">0 wyników</span></div><div id="globalSearchResults"></div></div>';content.appendChild(s);s.querySelector('#globalSearchInput').oninput=render;s.querySelector('#globalSearchType').onchange=render;s.onclick=e=>{const r=e.target.closest('[data-gs-kind]');if(r)openItem(r.dataset.gsKind,r.dataset.gsId)}}
+  }
+  function open(){ensure();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-global-search')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#globalSearchNav')?.classList.add('active');render();setTimeout(()=>document.querySelector('#globalSearchInput')?.focus(),0)}
+  function install(){ensure();window.bdsmGlobalSearch={open,render};['bdsm-offences-updated','bdsm-education-tasks-updated','bdsm-written-notes-updated','bdsm-hourly-reports-updated','bdsm-sync-complete'].forEach(e=>document.addEventListener(e,render));window.addEventListener('storage',render)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+</script>
+</body></html>`);q.document.close()}
 function printMonth(m){const q=window.open('','_blank');if(!q)return;q.document.write(`<!doctype html><meta charset="utf-8"><title>Raport miesięczny ${esc(m)}</title><h1>Raport miesięczny ${esc(m)}</h1><script>onload=()=>setTimeout(()=>print(),200)<\/script>`);q.document.close()}
 function install(){catchUp();ensureDailyUI();document.addEventListener('click',e=>{const b=e.target.closest?.('#nav button');if(!b)return;if(b.textContent.includes('Raport dzienny')){e.preventDefault();e.stopImmediatePropagation();openDaily();return}if(b.textContent.includes('Raport miesięczny')){e.preventDefault();e.stopImmediatePropagation();openMonthly()}},true);window.bdsmDailyReports={list:reports,refresh:()=>{catchUp();renderDaily()},open:openDaily,openDate:renderDetail,print:printReport,chronology,openMonthly}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
@@ -1549,7 +1702,57 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     const by={};hourly.forEach(x=>(by[x.date]??=[]).push(x));const days=Object.keys(by).sort().map(date=>section(fmtDate(date),['Godzina','Aktywność','Status','Notatka'],by[date].map(x=>`<tr><td>${esc(fmtTime(x.from))}–${esc(fmtTime(x.to))}</td><td>${esc(x.title)}</td><td>${esc(x.status)}</td><td>${esc(x.note||'')}</td></tr>`))).join('');
     const offRows=offences.map(x=>`<tr><td>${esc(fmtDateTime(x.occurred_at||x.created_at))}</td><td>${esc(x.title||'—')}</td><td>${esc(x.category||'—')}</td><td>${esc(x.severity||'—')}</td><td>${esc(x.status||'—')}</td></tr>`),punRows=punishments.map(e=>`<tr><td>${esc(e.type||'—')}</td><td>${esc(e.title||'—')}</td><td>${esc(fmtDateTime(e.start))}</td><td>${esc(fmtDateTime(e.end))}</td><td>${esc(e.status||'—')}</td></tr>`),taskRows=tasks.map(x=>`<tr><td>${esc(x.type||'—')}</td><td>${esc(x.title||'—')}</td><td>${esc(fmtDateTime(x.due_at))}</td><td>${esc(x.status||'—')}</td><td>${x.score==null?'—':esc(String(x.score)+(x.max_score!=null?'/'+x.max_score:''))}</td></tr>`),noteRows=notes.map(x=>`<tr><td>${esc(fmtDateTime(x.issued_at||x.date||x.created_at))}</td><td>${esc(x.type||x.kind||'uwaga')}</td><td>${esc(x.title||'—')}</td><td>${esc(x.status||'—')}</td><td>${esc(x.acknowledged?'Tak':'Nie')}</td></tr>`),pointRows=pointEvents.map(e=>`<tr><td>${esc(fmtDateTime(eventDate(e)))}</td><td>${esc(e.title||e.type||'Wpis')}</td><td>${pointsOf(e)>0?'+':''}${esc(pointsOf(e))}</td><td>${esc(e.status||'—')}</td></tr>`);
     const summary=`<div class="cards"><div><b>${hourly.length}</b><span>wpisów godzinowych</span></div><div><b>${offences.length}</b><span>przewinień</span></div><div><b>${punishments.filter(x=>String(x.type).toLowerCase()==='kara').length}</b><span>kar</span></div><div><b>${punishments.filter(x=>String(x.type).toLowerCase()==='szlaban').length}</b><span>szlabanów</span></div><div><b>${tasks.length}</b><span>zadań</span></div><div><b>${notes.length}</b><span>uwag/upomnień</span></div><div><b>${points>0?'+':''}${points}</b><span>punktów</span></div></div>`;
-    const w=window.open('','_blank');if(!w)return alert('Przeglądarka zablokowała okno raportu.');w.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Pełny raport ${esc(month)}</title><style>@page{size:A4;margin:12mm}body{font-family:Arial,sans-serif;color:#111;font-size:10.5px}h1{font-size:21px}h2{font-size:14px;margin:20px 0 6px;border-bottom:1px solid #aaa}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0}.cards div{border:1px solid #bbb;border-radius:6px;padding:8px}.cards b{font-size:17px;display:block}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:5px;text-align:left}.pageBreak{page-break-before:always}</style></head><body><h1>Raport miesięczny — BDSM APP</h1><div>Miesiąc: ${esc(month)} • wygenerowano: ${new Date().toLocaleString('pl-PL')}</div>${summary}<h2>Dziennik godzinowy</h2>${days||'<p>Brak wpisów godzinowych.</p>'}<div class="pageBreak"></div>${section('Przewinienia',['Data','Przewinienie','Kategoria','Waga','Status'],offRows)}${section('Kary i szlabany',['Typ','Nazwa','Początek','Koniec','Status'],punRows)}${section('Zadania edukacyjne',['Rodzaj','Zadanie','Termin','Status','Wynik'],taskRows)}${section('Uwagi / upomnienia',['Data','Rodzaj','Tytuł','Status','Potwierdzone'],noteRows)}${section('Punkty',['Data','Wpis','Punkty','Status'],pointRows)}<div class="pageBreak"></div>${timelineHtml}<script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script></body></html>`);w.document.close();
+    const w=window.open('','_blank');if(!w)return alert('Przeglądarka zablokowała okno raportu.');w.document.write(`<!doctype html><html lang="pl"><head><meta charset="utf-8"><title>Pełny raport ${esc(month)}</title><style>@page{size:A4;margin:12mm}body{font-family:Arial,sans-serif;color:#111;font-size:10.5px}h1{font-size:21px}h2{font-size:14px;margin:20px 0 6px;border-bottom:1px solid #aaa}.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0}.cards div{border:1px solid #bbb;border-radius:6px;padding:8px}.cards b{font-size:17px;display:block}table{width:100%;border-collapse:collapse}th,td{border:1px solid #ccc;padding:5px;text-align:left}.pageBreak{page-break-before:always}</style></head><body><h1>Raport miesięczny — BDSM APP</h1><div>Miesiąc: ${esc(month)} • wygenerowano: ${new Date().toLocaleString('pl-PL')}</div>${summary}<h2>Dziennik godzinowy</h2>${days||'<p>Brak wpisów godzinowych.</p>'}<div class="pageBreak"></div>${section('Przewinienia',['Data','Przewinienie','Kategoria','Waga','Status'],offRows)}${section('Kary i szlabany',['Typ','Nazwa','Początek','Koniec','Status'],punRows)}${section('Zadania edukacyjne',['Rodzaj','Zadanie','Termin','Status','Wynik'],taskRows)}${section('Uwagi / upomnienia',['Data','Rodzaj','Tytuł','Status','Potwierdzone'],noteRows)}${section('Punkty',['Data','Wpis','Punkty','Status'],pointRows)}<div class="pageBreak"></div>${timelineHtml}<script>window.onload=()=>setTimeout(()=>window.print(),250)<\/script><script>
+(()=>{
+  if(window.__bdsmGlobalSearchInstalled)return;
+  window.__bdsmGlobalSearchInstalled=true;
+  const STORES={
+    event:'bdsm-app-events-v3',
+    offence:'bdsm-app-offences-v1',
+    task:'bdsm-app-education-tasks-v1',
+    note:'bdsm-app-written-notes-v1',
+    hour:'bdsm-app-hourly-reports-v1'
+  };
+  const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const when=x=>x.occurred_at||x.issued_at||x.due_at||x.start||x.date||x.created_at||x.updated_at||'';
+  const id=x=>x.event_id||x.id||x.offence_id||x.przewinienie_id||x.task_id||x.note_id||x.report_id||'';
+  const title=x=>x.title||x.type||x.text||'Bez tytułu';
+  const meta=x=>[x.status,x.category,x.severity,x.type,x.description,x.body,x.note].filter(Boolean).join(' • ');
+  function all(){
+    const out=[];
+    Object.entries(STORES).forEach(([kind,key])=>read(key,[]).forEach(x=>out.push({kind,raw:x,id:id(x),title:title(x),meta:meta(x),when:when(x)})));
+    return out.sort((a,b)=>new Date(b.when||0)-new Date(a.when||0));
+  }
+  const labels={event:'Wydarzenie',offence:'Przewinienie',task:'Zadanie',note:'Uwaga / upomnienie',hour:'Dziennik godzinowy'};
+  const icons={event:'⚖',offence:'⚠',task:'📚',note:'📝',hour:'🕐'};
+  function openItem(kind,id){
+    if(kind==='offence'){window.bdsmRelationshipTimeline?.openCase?.(id)||window.bdsmOffences?.open?.();return}
+    if(kind==='task'){window.bdsmEducationTasks?.open?.();return}
+    if(kind==='note'){window.bdsmWrittenNotes?.open?.();return}
+    if(kind==='hour'){window.bdsmHourlyReports?.open?.();return}
+    if(kind==='event'){document.querySelector('#deadlinesNav')?.click();return}
+  }
+  function render(){
+    const q=norm(document.querySelector('#globalSearchInput')?.value||''),type=document.querySelector('#globalSearchType')?.value||'all',box=document.querySelector('#globalSearchResults');if(!box)return;
+    let rows=all();if(type!=='all')rows=rows.filter(x=>x.kind===type);if(q)rows=rows.filter(x=>norm(`${x.id} ${x.title} ${x.meta}`).includes(q));
+    document.querySelector('#globalSearchCount').textContent=`${rows.length} wyników`;
+    box.innerHTML=rows.length?rows.slice(0,200).map(x=>`<button class="gs-row" type="button" data-gs-kind="${esc(x.kind)}" data-gs-id="${esc(x.id)}"><span class="gs-icon">${icons[x.kind]}</span><span><strong>${esc(x.title)}</strong><small>${esc(labels[x.kind])}${x.id?' • '+esc(x.id):''}${x.meta?' • '+esc(x.meta):''}</small></span><time>${x.when?esc(new Date(x.when).toLocaleString('pl-PL')):'—'}</time></button>`).join(''):'<div class="empty">Brak wyników.</div>';
+  }
+  function ensure(){
+    const nav=document.querySelector('#nav'),content=document.querySelector('.content');if(!nav||!content)return;
+    if(!document.querySelector('#globalSearchNav')){const b=document.createElement('button');b.id='globalSearchNav';b.type='button';b.dataset.view='global-search';b.innerHTML='🔎 Wyszukiwanie';nav.appendChild(b);b.onclick=e=>{e.preventDefault();open()}}
+    if(!document.querySelector('#globalSearchStyles')){const st=document.createElement('style');st.id='globalSearchStyles';st.textContent='.gs-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.gs-toolbar input,.gs-toolbar select{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:10px}.gs-toolbar input{flex:1;min-width:260px}.gs-row{width:100%;display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;text-align:left;padding:11px;border:0;border-bottom:1px solid #222a39;background:transparent;color:inherit;cursor:pointer}.gs-row:hover{background:#111827}.gs-row small{display:block;color:#98a2b3;margin-top:3px}.gs-row time{font-size:11px;color:#98a2b3}.gs-icon{font-size:20px}@media(max-width:700px){.gs-row{grid-template-columns:32px 1fr}.gs-row time{grid-column:2}}';document.head.appendChild(st)}
+    if(!document.querySelector('#view-global-search')){const s=document.createElement('section');s.id='view-global-search';s.className='hidden';s.innerHTML='<div class="panel"><h3>🔎 Wyszukiwanie</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Przeszukuje lokalne dane aplikacji. Wyniki są tylko informacyjne i nie zmieniają żadnych wpisów.</p><div class="gs-toolbar"><input id="globalSearchInput" type="search" placeholder="Szukaj po tytule, opisie, statusie lub ID"><select id="globalSearchType"><option value="all">Wszystko</option><option value="offence">Przewinienia</option><option value="task">Zadania</option><option value="note">Uwagi / upomnienia</option><option value="event">Wydarzenia</option><option value="hour">Dziennik godzinowy</option></select><span id="globalSearchCount" class="mc-pill">0 wyników</span></div><div id="globalSearchResults"></div></div>';content.appendChild(s);s.querySelector('#globalSearchInput').oninput=render;s.querySelector('#globalSearchType').onchange=render;s.onclick=e=>{const r=e.target.closest('[data-gs-kind]');if(r)openItem(r.dataset.gsKind,r.dataset.gsId)}}
+  }
+  function open(){ensure();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-global-search')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#globalSearchNav')?.classList.add('active');render();setTimeout(()=>document.querySelector('#globalSearchInput')?.focus(),0)}
+  function install(){ensure();window.bdsmGlobalSearch={open,render};['bdsm-offences-updated','bdsm-education-tasks-updated','bdsm-written-notes-updated','bdsm-hourly-reports-updated','bdsm-sync-complete'].forEach(e=>document.addEventListener(e,render));window.addEventListener('storage',render)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+</script>
+</body></html>`);w.document.close();
   }
   function install(){ensureUI();render();window.bdsmHourlyReports={list:read,open:openView,printMonth};}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
@@ -1647,4 +1850,54 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->
+<script>
+(()=>{
+  if(window.__bdsmGlobalSearchInstalled)return;
+  window.__bdsmGlobalSearchInstalled=true;
+  const STORES={
+    event:'bdsm-app-events-v3',
+    offence:'bdsm-app-offences-v1',
+    task:'bdsm-app-education-tasks-v1',
+    note:'bdsm-app-written-notes-v1',
+    hour:'bdsm-app-hourly-reports-v1'
+  };
+  const read=(k,d=[])=>{try{return JSON.parse(localStorage.getItem(k)||JSON.stringify(d))}catch{return d}};
+  const esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+  const norm=s=>String(s||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const when=x=>x.occurred_at||x.issued_at||x.due_at||x.start||x.date||x.created_at||x.updated_at||'';
+  const id=x=>x.event_id||x.id||x.offence_id||x.przewinienie_id||x.task_id||x.note_id||x.report_id||'';
+  const title=x=>x.title||x.type||x.text||'Bez tytułu';
+  const meta=x=>[x.status,x.category,x.severity,x.type,x.description,x.body,x.note].filter(Boolean).join(' • ');
+  function all(){
+    const out=[];
+    Object.entries(STORES).forEach(([kind,key])=>read(key,[]).forEach(x=>out.push({kind,raw:x,id:id(x),title:title(x),meta:meta(x),when:when(x)})));
+    return out.sort((a,b)=>new Date(b.when||0)-new Date(a.when||0));
+  }
+  const labels={event:'Wydarzenie',offence:'Przewinienie',task:'Zadanie',note:'Uwaga / upomnienie',hour:'Dziennik godzinowy'};
+  const icons={event:'⚖',offence:'⚠',task:'📚',note:'📝',hour:'🕐'};
+  function openItem(kind,id){
+    if(kind==='offence'){window.bdsmRelationshipTimeline?.openCase?.(id)||window.bdsmOffences?.open?.();return}
+    if(kind==='task'){window.bdsmEducationTasks?.open?.();return}
+    if(kind==='note'){window.bdsmWrittenNotes?.open?.();return}
+    if(kind==='hour'){window.bdsmHourlyReports?.open?.();return}
+    if(kind==='event'){document.querySelector('#deadlinesNav')?.click();return}
+  }
+  function render(){
+    const q=norm(document.querySelector('#globalSearchInput')?.value||''),type=document.querySelector('#globalSearchType')?.value||'all',box=document.querySelector('#globalSearchResults');if(!box)return;
+    let rows=all();if(type!=='all')rows=rows.filter(x=>x.kind===type);if(q)rows=rows.filter(x=>norm(`${x.id} ${x.title} ${x.meta}`).includes(q));
+    document.querySelector('#globalSearchCount').textContent=`${rows.length} wyników`;
+    box.innerHTML=rows.length?rows.slice(0,200).map(x=>`<button class="gs-row" type="button" data-gs-kind="${esc(x.kind)}" data-gs-id="${esc(x.id)}"><span class="gs-icon">${icons[x.kind]}</span><span><strong>${esc(x.title)}</strong><small>${esc(labels[x.kind])}${x.id?' • '+esc(x.id):''}${x.meta?' • '+esc(x.meta):''}</small></span><time>${x.when?esc(new Date(x.when).toLocaleString('pl-PL')):'—'}</time></button>`).join(''):'<div class="empty">Brak wyników.</div>';
+  }
+  function ensure(){
+    const nav=document.querySelector('#nav'),content=document.querySelector('.content');if(!nav||!content)return;
+    if(!document.querySelector('#globalSearchNav')){const b=document.createElement('button');b.id='globalSearchNav';b.type='button';b.dataset.view='global-search';b.innerHTML='🔎 Wyszukiwanie';nav.appendChild(b);b.onclick=e=>{e.preventDefault();open()}}
+    if(!document.querySelector('#globalSearchStyles')){const st=document.createElement('style');st.id='globalSearchStyles';st.textContent='.gs-toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}.gs-toolbar input,.gs-toolbar select{background:#0a101a;color:#eef1f6;border:1px solid #283141;border-radius:8px;padding:10px}.gs-toolbar input{flex:1;min-width:260px}.gs-row{width:100%;display:grid;grid-template-columns:36px 1fr auto;gap:10px;align-items:center;text-align:left;padding:11px;border:0;border-bottom:1px solid #222a39;background:transparent;color:inherit;cursor:pointer}.gs-row:hover{background:#111827}.gs-row small{display:block;color:#98a2b3;margin-top:3px}.gs-row time{font-size:11px;color:#98a2b3}.gs-icon{font-size:20px}@media(max-width:700px){.gs-row{grid-template-columns:32px 1fr}.gs-row time{grid-column:2}}';document.head.appendChild(st)}
+    if(!document.querySelector('#view-global-search')){const s=document.createElement('section');s.id='view-global-search';s.className='hidden';s.innerHTML='<div class="panel"><h3>🔎 Wyszukiwanie</h3><p style="color:#98a2b3;font-size:12px;margin-top:-6px">Przeszukuje lokalne dane aplikacji. Wyniki są tylko informacyjne i nie zmieniają żadnych wpisów.</p><div class="gs-toolbar"><input id="globalSearchInput" type="search" placeholder="Szukaj po tytule, opisie, statusie lub ID"><select id="globalSearchType"><option value="all">Wszystko</option><option value="offence">Przewinienia</option><option value="task">Zadania</option><option value="note">Uwagi / upomnienia</option><option value="event">Wydarzenia</option><option value="hour">Dziennik godzinowy</option></select><span id="globalSearchCount" class="mc-pill">0 wyników</span></div><div id="globalSearchResults"></div></div>';content.appendChild(s);s.querySelector('#globalSearchInput').oninput=render;s.querySelector('#globalSearchType').onchange=render;s.onclick=e=>{const r=e.target.closest('[data-gs-kind]');if(r)openItem(r.dataset.gsKind,r.dataset.gsId)}}
+  }
+  function open(){ensure();document.querySelectorAll('.content > section').forEach(s=>s.classList.add('hidden'));document.querySelector('#view-global-search')?.classList.remove('hidden');document.querySelectorAll('#nav button').forEach(b=>b.classList.remove('active'));document.querySelector('#globalSearchNav')?.classList.add('active');render();setTimeout(()=>document.querySelector('#globalSearchInput')?.focus(),0)}
+  function install(){ensure();window.bdsmGlobalSearch={open,render};['bdsm-offences-updated','bdsm-education-tasks-updated','bdsm-written-notes-updated','bdsm-hourly-reports-updated','bdsm-sync-complete'].forEach(e=>document.addEventListener(e,render));window.addEventListener('storage',render)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+
+</script>
 </body></html>
