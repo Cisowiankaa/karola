@@ -28,6 +28,7 @@ jobs:
           modules = [
               ('bdsm-app/month-calendar-status-v2.js','window.__bdsmMonthCalendarStatusV2Installed'),
               ('bdsm-app/global-search-module.js','window.__bdsmGlobalSearchInstalled'),
+              ('bdsm-app/activity-center-module.js','window.__bdsmActivityCenterInstalled'),
           ]
           for path, marker in modules:
               if marker in text:
