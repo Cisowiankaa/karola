@@ -15,7 +15,7 @@
     'bdsm-app-education-tasks-v1','bdsm-app-written-notes-v1','bdsm-app-hourly-reports-v1',
     'bdsm-app-event-offence-links-v1','bdsm-app-today-priorities-v1','bdsm-app-today-checked-v1',
     'bdsm-app-weekly-days-done-v1','bdsm-app-weekly-notes-v1','bdsm-app-weekly-summary-v1',
-    'bdsm-app-day-agenda-meta-v1','bdsm-app-daily-reports-v1'
+    'bdsm-app-day-agenda-meta-v1','bdsm-app-daily-reports-v1','bdsm-app-pinned-items-v1'
   ];
   let syncing=false,dirtyTimer=null;
 
