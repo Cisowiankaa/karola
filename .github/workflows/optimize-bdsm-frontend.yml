@@ -37,7 +37,7 @@ jobs:
               ('bdsm-app/dashboard-trend-insights.js','window.__bdsmDashboardTrendInsightsInstalled'),
               ('bdsm-app/dashboard-summary-export.js','window.__bdsmDashboardSummaryExportInstalled'),
               ('bdsm-app/dashboard-cloud-status.js','window.__bdsmDashboardCloudStatusInstalled'),
-              ('bdsm-app/cloud-first-sync-watchdog.js','window.__bdsmCloudFirstSyncWatchdogV2Installed'),
+              ('bdsm-app/cloud-first-sync-watchdog.js','window.__bdsmCloudFirstSyncWatchdogV3Installed'),
               ('bdsm-app/dashboard-data-quality.js','window.__bdsmDashboardDataQualityInstalled'),
               ('bdsm-app/dashboard-data-backup.js','window.__bdsmDashboardDataBackupInstalled'),
               ('bdsm-app/dashboard-quick-actions.js','window.__bdsmDashboardQuickActionsInstalled'),
