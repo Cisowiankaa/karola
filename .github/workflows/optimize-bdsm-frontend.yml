@@ -34,6 +34,7 @@ jobs:
               ('bdsm-app/dashboard-four-week-trend.js','window.__bdsmDashboardFourWeekTrendInstalled'),
               ('bdsm-app/dashboard-month-compare.js','window.__bdsmDashboardMonthCompareInstalled'),
               ('bdsm-app/dashboard-trend-insights.js','window.__bdsmDashboardTrendInsightsInstalled'),
+              ('bdsm-app/dashboard-summary-export.js','window.__bdsmDashboardSummaryExportInstalled'),
           ]
           for path, marker in modules:
               if marker in text:
