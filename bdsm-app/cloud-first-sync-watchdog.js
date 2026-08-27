@@ -1,6 +1,6 @@
 (()=>{
-  if(window.__bdsmCloudFirstSyncWatchdogInstalled)return;
-  window.__bdsmCloudFirstSyncWatchdogInstalled=true;
+  if(window.__bdsmCloudFirstSyncWatchdogV2Installed)return;
+  window.__bdsmCloudFirstSyncWatchdogV2Installed=true;
   const META='bdsm-app-last-cloud-sync';
   const CONFIG='bdsm-app-cloud-config';
   const VERIFIED='bdsm-app-first-cloud-sync-verified-v1';
@@ -15,11 +15,8 @@
     if(!force&&verified()&&freshSupabase())return true;
     const api=window.bdsmCloudSync;if(!api?.push)return false;
     running=true;
-    try{
-      const ok=await api.push(reason);
-      if(ok){markVerified();document.dispatchEvent(new CustomEvent('bdsm-cloud-watchdog-check',{detail:{ok:true,reason}}));return true}
-      return false;
-    }catch(_){return false}finally{running=false}
+    try{const ok=await api.push(reason);if(ok){markVerified();document.dispatchEvent(new CustomEvent('bdsm-cloud-watchdog-check',{detail:{ok:true,reason}}));return true}return false}
+    catch(_){return false}finally{running=false}
   }
   function start(){
     const c=read(CONFIG,{});
