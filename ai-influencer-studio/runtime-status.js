@@ -42,8 +42,8 @@
     const s=document.createElement('script');s.src=src;s.dataset[flag.replace(/-([a-z])/g,(_,c)=>c.toUpperCase())]='1';s.defer=true;document.head.appendChild(s);
   }
   function loadCalendarHandoff(){if(!window.AIIContentCalendarHandoff)loadScriptOnce('content-calendar-handoff.js?v=20260827-2','aii-calendar-handoff')}
-  function loadOfflineRuntime(){if(!window.AIIOfflineRuntime)loadScriptOnce('offline-runtime.js?v=20260827-1','aii-offline-runtime')}
-  function loadPwaRuntime(){if(!window.AIIPwaRuntime)loadScriptOnce('pwa-runtime.js?v=20260827-1','aii-pwa-runtime')}
+  function loadOfflineRuntime(){if(!window.AIIOfflineRuntime)loadScriptOnce('offline-runtime.js?v=20260827-3','aii-offline-runtime')}
+  function loadPwaRuntime(){if(!window.AIIPwaRuntime)loadScriptOnce('pwa-runtime.js?v=20260827-2','aii-pwa-runtime')}
 
   async function ping(path) {
     const ctrl = new AbortController();
