@@ -15,6 +15,7 @@ patterns = [
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/education-library-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/written-notes-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/relationship-timeline-module\.js[^\"]*"[^>]*></script>',
+    r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/timeline-ui-v2\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/case-controls-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/today-dashboard-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/weekly-plan-module\.js[^\"]*"[^>]*></script>',
@@ -48,6 +49,7 @@ education = (root / 'education-tasks-module.js').read_text(encoding='utf-8')
 education_library = (root / 'education-library-module.js').read_text(encoding='utf-8')
 written_notes = (root / 'written-notes-module.js').read_text(encoding='utf-8')
 timeline = (root / 'relationship-timeline-module.js').read_text(encoding='utf-8')
+timeline_ui_v2 = (root / 'timeline-ui-v2.js').read_text(encoding='utf-8')
 case_controls = (root / 'case-controls-module.js').read_text(encoding='utf-8')
 today_dashboard = (root / 'today-dashboard-module.js').read_text(encoding='utf-8')
 weekly_plan = (root / 'weekly-plan-module.js').read_text(encoding='utf-8')
@@ -97,11 +99,11 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-mods = [sync_queue_guard, sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, case_controls, today_dashboard, weekly_plan, month_calendar, day_agenda, agenda_cloud, daily_reports, hourly_reports, cloud_status]
+mods = [sync_queue_guard, sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, timeline_ui_v2, case_controls, today_dashboard, weekly_plan, month_calendar, day_agenda, agenda_cloud, daily_reports, hourly_reports, cloud_status]
 runtime = '<!-- BDSM_RUNTIME_INLINE_START -->\n' + ''.join(f'<script>\n{x}\n</script>\n' for x in mods) + '<!-- BDSM_RUNTIME_INLINE_END -->'
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: sync queue guard + runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + day agenda + agenda cloud sync + daily reports + hourly reports + cloud status + safety')
-# build trigger: cloud status
+print('Optimized BDSM index: sync queue guard + runtime + offences + deadlines + education + notes + timeline v2 + case controls + today dashboard + weekly plan + month calendar + day agenda + agenda cloud sync + daily reports + hourly reports + cloud status + safety')
+# build trigger: timeline ui v2
