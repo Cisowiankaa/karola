@@ -14,19 +14,34 @@ jobs:
   test-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: POST safe empty sync to Supabase Edge Function
+      - name: Verify sync and pull through Supabase
         shell: bash
         run: |
           set -euo pipefail
+          API='https://ygesxujnjruplqoqgvpy.supabase.co/functions/v1/bdsm-sync'
           ANON='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlnZXN4dWpuanJ1cGxxb3FndnB5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc4Mjg2ODEsImV4cCI6MjEwMzQwNDY4MX0.nonuToHgBTX9nAZHUrOBzIolGxkWpkz66Zf_wkbZIsE'
           PUB='sb_publishable_mAAREnT3ube6bTSDnv5l0Q_15fvGh7X'
-          code=$(curl -sS -o response.txt -w "%{http_code}" \
-            -X POST 'https://ygesxujnjruplqoqgvpy.supabase.co/functions/v1/bdsm-sync' \
+          SECRET='github-selftest-secret-2026-08-27-very-long'
+          ACCOUNT='ACC-E2E-SELFTEST'
+          MARKER="E2E-$(date +%s)"
+          NOW="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          sync_code=$(curl -sS -o sync.json -w "%{http_code}" \
+            -X POST "$API" \
             -H "Authorization: Bearer $ANON" \
             -H "apikey: $PUB" \
             -H 'Content-Type: application/json' \
-            -H 'Accept: application/json' \
-            --data '{"action":"sync","requestId":"GITHUB-SUPABASE-'"$(date +%s)"'","accountId":"ACC-SYSTEM-SELFTEST","events":[],"rules":{},"accessList":[],"clientTime":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}')
-          cat response.txt || true
-          echo "HTTP $code"
-          test "$code" -ge 200 -a "$code" -lt 300
+            --data '{"action":"sync","requestId":"'"$MARKER"'-SYNC","accountId":"'"$ACCOUNT"'","syncSecret":"'"$SECRET"'","payload":{"schemaVersion":2,"savedAt":"'"$NOW"'","testMarker":"'"$MARKER"'"}}')
+          cat sync.json
+          test "$sync_code" -eq 200
+
+          pull_code=$(curl -sS -o pull.json -w "%{http_code}" \
+            -X POST "$API" \
+            -H "Authorization: Bearer $ANON" \
+            -H "apikey: $PUB" \
+            -H 'Content-Type: application/json' \
+            --data '{"action":"pull","requestId":"'"$MARKER"'-PULL","accountId":"'"$ACCOUNT"'","syncSecret":"'"$SECRET"'"}')
+          cat pull.json
+          test "$pull_code" -eq 200
+          grep -q '"found":true' pull.json
+          grep -q "$MARKER" pull.json
