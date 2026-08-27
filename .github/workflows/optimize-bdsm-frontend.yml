@@ -38,6 +38,7 @@ jobs:
               ('bdsm-app/dashboard-summary-export.js','window.__bdsmDashboardSummaryExportInstalled'),
               ('bdsm-app/dashboard-cloud-status.js','window.__bdsmDashboardCloudStatusInstalled'),
               ('bdsm-app/cloud-first-sync-watchdog.js','window.__bdsmCloudFirstSyncWatchdogV2Installed'),
+              ('bdsm-app/dashboard-data-quality.js','window.__bdsmDashboardDataQualityInstalled'),
           ]
           for path, marker in modules:
               if marker in text:
