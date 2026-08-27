@@ -1,4 +1,4 @@
-name: BDSM sync v3 self-test
+name: BDSM private sync healthcheck
 
 on:
   push:
@@ -14,15 +14,15 @@ jobs:
   test-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: POST healthcheck to Make v3
+      - name: POST healthcheck to Make private space
         shell: bash
         run: |
           set -euo pipefail
           code=$(curl -sS -o response.txt -w "%{http_code}" \
-            -X POST 'https://hook.eu1.make.com/1e7vxw98nlgw8r6fqdwrq0nxhg4mubi7' \
+            -X POST 'https://hook.eu1.make.com/i3ukjt21q17182dkudll76bh4p5s51ry' \
             -H 'Content-Type: application/json' \
             -H 'Accept: application/json' \
-            --data '{"action":"healthcheck","requestId":"GITHUB-V3-'"$(date +%s)"'"}')
+            --data '{"action":"healthcheck","requestId":"GITHUB-PRIVATE-'"$(date +%s)"'"}')
           cat response.txt || true
           echo "HTTP $code"
           test "$code" -ge 200 -a "$code" -lt 300
