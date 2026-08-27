@@ -41,6 +41,7 @@ jobs:
               ('bdsm-app/dashboard-data-quality.js','window.__bdsmDashboardDataQualityInstalled'),
               ('bdsm-app/dashboard-data-backup.js','window.__bdsmDashboardDataBackupInstalled'),
               ('bdsm-app/dashboard-quick-actions.js','window.__bdsmDashboardQuickActionsInstalled'),
+              ('bdsm-app/dashboard-panel-controls.js','window.__bdsmDashboardPanelControlsInstalled'),
           ]
           for path, marker in modules:
               if marker in text:
