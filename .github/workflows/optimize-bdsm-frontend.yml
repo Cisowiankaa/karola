@@ -31,6 +31,7 @@ jobs:
               ('bdsm-app/activity-center-module.js','window.__bdsmActivityCenterInstalled'),
               ('bdsm-app/dashboard-activity-v2.js','window.__bdsmDashboardActivityV2Installed'),
               ('bdsm-app/dashboard-week-summary.js','window.__bdsmDashboardWeekSummaryInstalled'),
+              ('bdsm-app/dashboard-week-balance.js','window.__bdsmDashboardWeekBalanceInstalled'),
               ('bdsm-app/dashboard-four-week-trend.js','window.__bdsmDashboardFourWeekTrendInstalled'),
               ('bdsm-app/dashboard-month-compare.js','window.__bdsmDashboardMonthCompareInstalled'),
               ('bdsm-app/dashboard-trend-insights.js','window.__bdsmDashboardTrendInsightsInstalled'),
