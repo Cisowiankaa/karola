@@ -23,6 +23,7 @@ patterns = [
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/agenda-cloud-sync-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/daily-reports-module\.js[^\"]*"[^>]*></script>',
     r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/hourly-reports-module\.js[^\"]*"[^>]*></script>',
+    r'\n?<script[^>]+src="https://cdn\.jsdelivr\.net/gh/Cisowiankaa/karola@[^\"]+/bdsm-app/cloud-status-module\.js[^\"]*"[^>]*></script>',
 ]
 for pattern in patterns:
     text = re.sub(pattern, '', text)
@@ -55,6 +56,7 @@ day_agenda = (root / 'day-agenda-module.js').read_text(encoding='utf-8')
 agenda_cloud = (root / 'agenda-cloud-sync-module.js').read_text(encoding='utf-8')
 daily_reports = (root / 'daily-reports-module.js').read_text(encoding='utf-8')
 hourly_reports = (root / 'hourly-reports-module.js').read_text(encoding='utf-8')
+cloud_status = (root / 'cloud-status-module.js').read_text(encoding='utf-8')
 
 safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 <style>
@@ -95,11 +97,11 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 </script>
 <!-- BDSM_SAFETY_TOPBAR_END -->'''
 
-mods = [sync_queue_guard, sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, case_controls, today_dashboard, weekly_plan, month_calendar, day_agenda, agenda_cloud, daily_reports, hourly_reports]
+mods = [sync_queue_guard, sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, case_controls, today_dashboard, weekly_plan, month_calendar, day_agenda, agenda_cloud, daily_reports, hourly_reports, cloud_status]
 runtime = '<!-- BDSM_RUNTIME_INLINE_START -->\n' + ''.join(f'<script>\n{x}\n</script>\n' for x in mods) + '<!-- BDSM_RUNTIME_INLINE_END -->'
 
 block = '\n' + runtime + '\n' + safety + '\n'
 text = text.replace('</body>', block + '</body>')
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: sync queue guard + runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + day agenda + agenda cloud sync + daily reports + hourly reports + safety')
-# build trigger: sync queue guard
+print('Optimized BDSM index: sync queue guard + runtime + offences + deadlines + education + notes + timeline + case controls + today dashboard + weekly plan + month calendar + day agenda + agenda cloud sync + daily reports + hourly reports + cloud status + safety')
+# build trigger: cloud status
