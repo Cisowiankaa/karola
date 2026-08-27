@@ -1,4 +1,4 @@
-name: BDSM sync v2 self-test
+name: BDSM sync v3 self-test
 
 on:
   push:
@@ -14,15 +14,15 @@ jobs:
   test-sync:
     runs-on: ubuntu-latest
     steps:
-      - name: POST safe empty sync to Make v2
+      - name: POST healthcheck to Make v3
         shell: bash
         run: |
           set -euo pipefail
           code=$(curl -sS -o response.txt -w "%{http_code}" \
-            -X POST 'https://hook.eu1.make.com/b5wib2471u7oqypl5qrqvmrj33hqwhkc' \
+            -X POST 'https://hook.eu1.make.com/1e7vxw98nlgw8r6fqdwrq0nxhg4mubi7' \
             -H 'Content-Type: application/json' \
             -H 'Accept: application/json' \
-            --data '{"action":"sync","requestId":"GITHUB-SELFTEST-'"$(date +%s)"'","accountId":"ACC-SYSTEM-SELFTEST","events":[],"rules":{},"accessList":[],"clientTime":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'"}')
+            --data '{"action":"healthcheck","requestId":"GITHUB-V3-'"$(date +%s)"'"}')
           cat response.txt || true
           echo "HTTP $code"
           test "$code" -ge 200 -a "$code" -lt 300
