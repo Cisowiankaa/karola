@@ -285,6 +285,9 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
 
 
 
+
+
+
 <!-- BDSM_RUNTIME_INLINE_START -->
 <script>
 (()=>{
@@ -984,6 +987,18 @@ $('#chipDate').textContent=new Date().toLocaleDateString('pl-PL');$('#ruleCarry'
   function refresh(){ensureUI();render()}
   function install(){refresh();['bdsm-offences-updated','bdsm-written-notes-updated','bdsm-education-tasks-updated','bdsm-case-linked','bdsm-sync-complete'].forEach(ev=>document.addEventListener(ev,refresh));window.addEventListener('storage',refresh);window.bdsmRelationshipTimeline={open:openView,openCase,quickAdd,groups:build,caseStatus,monthHtml};}
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
+})();
+</script>
+<script>
+(()=>{
+ if(window.__timelineUiV2)return;window.__timelineUiV2=true;
+ function status(card){const s=card.querySelector('.case-status');return ['open','progress','waiting','closed'].find(x=>s?.classList.contains(x))||'open'}
+ function enhance(){const view=document.querySelector('#view-timeline');if(!view)return;
+  if(!view.querySelector('.tlv2-filters')){const f=document.createElement('div');f.className='tlv2-filters';f.innerHTML='<button class="btn active" data-tlv2="all">Wszystkie</button><button class="btn" data-tlv2="open">Otwarte</button><button class="btn" data-tlv2="progress">W toku</button><button class="btn" data-tlv2="waiting">Czekające</button><button class="btn" data-tlv2="closed">Zakończone</button>';view.querySelector('#timelineStats')?.insertAdjacentElement('beforebegin',f);f.addEventListener('click',e=>{const b=e.target.closest('[data-tlv2]');if(!b)return;f.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');view.dataset.tlv2=b.dataset.tlv2;apply()})}
+  if(!document.querySelector('#tlv2-style')){const s=document.createElement('style');s.id='tlv2-style';s.textContent='.tlv2-filters{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.tlv2-filters .active{border-color:#7c3aed;color:#dec8ff}.tlv2-meta{color:#98a2b3;font-size:11px;margin:5px 0 8px}.tlv2-closed{border-top:1px solid #234d32!important}';document.head.appendChild(s)}apply()}
+ function apply(){const view=document.querySelector('#view-timeline');if(!view)return;const filter=view.dataset.tlv2||'all';view.querySelectorAll('.tl-card[data-case-id]').forEach(card=>{const st=status(card);card.style.display=(filter==='all'||filter===st)?'':'none';if(!card.querySelector('.tlv2-meta')){const steps=card.querySelectorAll('.tl-step'),kinds=[...steps].map(x=>x.textContent||'');const task=kinds.some(x=>x.includes('Zadanie')),note=kinds.some(x=>x.includes('Uwaga')||x.includes('upomn')),event=kinds.some(x=>x.includes('Kara')||x.includes('Szlaban'));const count=[task,note,event].filter(Boolean).length;const m=document.createElement('div');m.className='tlv2-meta';m.textContent=`Powiązania: ${count}/3 typów`;card.querySelector('.tl-card-head')?.insertAdjacentElement('afterend',m)}if(st==='closed'&&!card.querySelector('.tlv2-closed')){const x=document.createElement('div');x.className='tl-step tlv2-closed';x.innerHTML='<div class="tl-dot">✓</div><div><strong>Zamknięcie sprawy</strong><div>Sprawa zamknięta ręcznie</div><small>Bez automatycznego przedłużania lub zaostrzania.</small></div>';card.appendChild(x)}})}
+ function install(){enhance();const v=document.querySelector('#view-timeline');if(v)new MutationObserver(enhance).observe(v,{childList:true,subtree:true});['bdsm-offences-updated','bdsm-written-notes-updated','bdsm-education-tasks-updated','bdsm-case-linked'].forEach(e=>document.addEventListener(e,()=>setTimeout(enhance,0)))}
+ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
 </script>
 <script>
