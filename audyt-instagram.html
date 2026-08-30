@@ -1,0 +1,646 @@
+<title>Audyt Karolina Atelier</title>
+<style>
+  :root{
+    --ground:#0B0E14;
+    --panel:#151A23;
+    --panel-2:#1C222E;
+    --line:#2A3242;
+    --ink:#E9EDF4;
+    --muted:#828D9F;
+    --dim:#5C6779;
+    --ok:#35D98A;
+    --bad:#FF4A5C;
+    --warn:#FFB020;
+    --f-display:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    --f-mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--f-display);
+    font-size:17px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:520px;margin:0 auto;padding:0 18px 80px;}
+
+  /* ---------- shared atoms ---------- */
+  .eyebrow{
+    font-family:var(--f-mono);
+    font-size:11px;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--dim);
+    margin:0;
+  }
+  .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;}
+  .sect{padding-top:52px;}
+  .sect > .eyebrow{margin-bottom:10px;}
+  h2{
+    font-size:30px;line-height:1.08;letter-spacing:-.025em;font-weight:800;
+    margin:0 0 14px;text-wrap:balance;color:var(--ink);
+  }
+  p{margin:0 0 14px;color:#C3CBD8;}
+  strong{color:var(--ink);font-weight:700;}
+  .rule{height:1px;background:var(--line);border:0;margin:0;}
+
+  /* ---------- masthead ---------- */
+  .top{padding:44px 0 0;}
+  .top h1{
+    font-size:54px;line-height:.92;letter-spacing:-.04em;font-weight:800;
+    margin:14px 0 16px;text-wrap:balance;
+  }
+  .top h1 em{font-style:normal;color:var(--bad);}
+  .handle{
+    font-family:var(--f-mono);font-size:13px;color:var(--muted);
+    display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:6px;
+  }
+  .handle b{color:var(--ink);font-weight:500;}
+
+  /* ---------- vitals strip ---------- */
+  .vitals{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:3px;
+    margin:24px 0 8px;overflow:hidden;
+  }
+  .vital{background:var(--panel);padding:14px 12px;}
+  .vital .v{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:26px;font-weight:600;letter-spacing:-.03em;display:block;line-height:1.1;}
+  .vital .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin-top:5px;display:block;}
+
+  /* ---------- warning banner ---------- */
+  .banner{
+    border:1px solid var(--bad);border-radius:3px;background:rgba(255,74,92,.07);
+    padding:18px;margin:28px 0 0;
+  }
+  .banner .eyebrow{color:var(--bad);margin-bottom:8px;}
+  .banner p{margin:0;font-size:15px;color:#D9C4C8;}
+  .banner p + p{margin-top:10px;}
+
+  /* ---------- alarm blocks ---------- */
+  .alarm{
+    background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--bad);
+    border-radius:3px;padding:20px 18px;margin-bottom:14px;
+  }
+  .alarm.amber{border-left-color:var(--warn);}
+  .alarm.good{border-left-color:var(--ok);}
+  .alarm.good .tag{color:var(--ok);}
+  .alarm.good .ev dt{color:var(--ok);}
+  .alarm h3{
+    font-size:20px;line-height:1.18;letter-spacing:-.02em;font-weight:800;margin:8px 0 12px;text-wrap:balance;
+  }
+  .alarm p{font-size:15px;margin-bottom:10px;}
+  .alarm p:last-child{margin-bottom:0;}
+  .tag{
+    font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--bad);
+  }
+  .alarm.amber .tag{color:var(--warn);}
+
+  /* evidence rows */
+  .ev{
+    display:grid;grid-template-columns:auto 1fr;gap:10px 14px;align-items:baseline;
+    margin:14px 0;padding:14px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  }
+  .ev dt{
+    font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:19px;font-weight:600;
+    color:var(--bad);white-space:nowrap;letter-spacing:-.02em;
+  }
+  .alarm.amber .ev dt{color:var(--warn);}
+  .ev dd{margin:0;font-size:14px;color:var(--muted);line-height:1.35;}
+
+  /* ---------- bimodal reels chart ---------- */
+  .chart{
+    background:var(--panel);border:1px solid var(--line);border-radius:3px;padding:18px;margin:16px 0;
+    overflow-x:auto;
+  }
+  .bars{display:flex;align-items:flex-end;gap:5px;height:150px;margin:16px 0 8px;}
+  .bar{flex:1;border-radius:2px 2px 0 0;min-height:2px;position:relative;}
+  .bar.hi{background:linear-gradient(180deg,#35D98A,#1E7A50);}
+  .bar.lo{background:var(--bad);opacity:.85;}
+  .bar span{
+    position:absolute;top:-17px;left:50%;transform:translateX(-50%);
+    font-family:var(--f-mono);font-size:10px;color:var(--muted);
+  }
+  .chart-legend{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11px;color:var(--dim);border-top:1px solid var(--line);padding-top:10px;}
+  .chart-legend b{display:block;font-size:14px;font-weight:600;letter-spacing:-.02em;margin-top:3px;}
+  .chart-legend .l-hi b{color:var(--ok);}
+  .chart-legend .l-lo b{color:var(--bad);}
+
+  /* ---------- ranked cards ---------- */
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:3px;
+    margin-bottom:12px;overflow:hidden;
+  }
+  .card-top{display:flex;gap:14px;padding:16px 16px 12px;align-items:flex-start;}
+  .rank{
+    font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:34px;font-weight:700;
+    line-height:.9;letter-spacing:-.05em;color:var(--dim);flex:none;width:44px;
+  }
+  .card-head{flex:1;min-width:0;}
+  .card-head h4{
+    font-size:17px;line-height:1.22;letter-spacing:-.015em;font-weight:700;margin:0 0 8px;text-wrap:balance;
+  }
+  .chips{display:flex;flex-wrap:wrap;gap:5px;}
+  .chip{
+    font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 7px;border-radius:2px;background:var(--panel-2);color:var(--muted);border:1px solid var(--line);
+    white-space:nowrap;
+  }
+  .chip.reel{color:var(--warn);border-color:rgba(255,176,32,.4);}
+  .chip.stat{color:var(--ink);}
+
+  /* signal bar = likes relative to top post */
+  .signal{height:3px;background:var(--panel-2);}
+  .signal i{display:block;height:100%;background:linear-gradient(90deg,#1E7A50,#35D98A);}
+
+  .lines{padding:14px 16px 16px;display:grid;gap:11px;}
+  .line{display:grid;grid-template-columns:18px 1fr;gap:10px;align-items:start;font-size:14.5px;line-height:1.4;}
+  .line .m{font-family:var(--f-mono);font-weight:700;font-size:15px;line-height:1.3;}
+  .line.y .m{color:var(--ok);}
+  .line.n .m{color:var(--bad);}
+  .line.y div{color:#B9CFC3;}
+  .line.n div{color:#D6BAC0;}
+  .line .lab{
+    font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    display:block;margin-bottom:2px;
+  }
+  .line.y .lab{color:#2E9A64;}
+  .line.n .lab{color:#B33747;}
+  .hookrow{
+    padding:11px 16px;background:var(--panel-2);border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+    font-size:14px;color:#C3CBD8;
+  }
+  .hookrow .lab{
+    font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);
+    display:block;margin-bottom:3px;
+  }
+
+  /* ---------- action list ---------- */
+  .todo{
+    display:grid;gap:1px;background:var(--line);border:1px solid var(--line);
+    border-radius:3px;overflow:hidden;list-style:none;margin:0;padding:0;
+  }
+  .todo li{background:var(--panel);padding:16px;display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:start;}
+  .todo .n{
+    font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:13px;font-weight:700;
+    color:var(--ground);background:var(--ok);border-radius:2px;
+    width:22px;height:22px;display:grid;place-items:center;flex:none;
+  }
+  .todo h5{font-size:16px;font-weight:700;letter-spacing:-.015em;margin:0 0 5px;line-height:1.25;}
+  .todo p{font-size:14px;margin:0;color:var(--muted);line-height:1.4;}
+
+  /* ---------- verdict ---------- */
+  .verdict{
+    border:1px solid var(--line);border-radius:3px;background:var(--panel);
+    padding:26px 20px;margin-top:16px;
+  }
+  .verdict .big{
+    font-size:26px;line-height:1.14;font-weight:800;letter-spacing:-.025em;margin:10px 0 14px;text-wrap:balance;
+  }
+  .verdict .big b{color:var(--bad);}
+  .verdict p{font-size:15px;}
+  .verdict p:last-child{margin-bottom:0;}
+
+  .foot{
+    margin-top:44px;padding-top:18px;border-top:1px solid var(--line);
+    font-family:var(--f-mono);font-size:11px;line-height:1.6;color:var(--dim);
+  }
+  .foot b{color:var(--muted);font-weight:500;}
+
+  @media (max-width:400px){
+    .wrap{padding:0 14px 60px;}
+    .top h1{font-size:44px;}
+    .vital .v{font-size:22px;}
+    h2{font-size:26px;}
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">Audyt treści · Instagram · sierpień 2026</p>
+    <h1>73 posty.<br>36 897 lajków.<br><em>212 komentarzy.</em></h1>
+    <div class="handle">
+      <b>@karolina_atelier_</b><span>·</span><span>5 012 obserwujących</span><span>·</span><span>20 lut – 11 sie 2026</span>
+    </div>
+
+    <div class="vitals">
+      <div class="vital"><span class="v">20,8%</span><span class="k">lajki / wyświetlenia</span></div>
+      <div class="vital"><span class="v">65:1</span><span class="k">lajki / zapis</span></div>
+      <div class="vital"><span class="v">8</span><span class="k">widzów relacji</span></div>
+    </div>
+
+    <div class="banner">
+      <p class="eyebrow">Skąd te liczby</p>
+      <p>Podpięte API dało lajki i komentarze z 73 publikacji. Twoje <strong>Statystyki z aplikacji</strong> dołożyły wyświetlenia — <span class="num">130 956</span> w 90 dniach, <span class="num">10 381</span> widzów, <span class="num">+3 056</span> obserwatorów.</p>
+      <p>Zakładka <strong>„Zawartość"</strong> dołożyła zapisy i udostępnienia dla sześciu ostatnich publikacji — i to one dały najtwardsze wnioski w tym raporcie. Żadnej liczby tu nie oszacowałem.</p>
+    </div>
+  </header>
+
+  <section class="sect">
+    <p class="eyebrow">Zanim przejdziemy do TOP 10</p>
+    <h2>Twoje liczby nie wyglądają na prawdziwe.</h2>
+    <p>Musimy to załatwić najpierw, bo to unieważnia wszystko, co byś z tego rankingu wyczytała.</p>
+
+    <div class="alarm">
+      <span class="tag">Alarm 01 · Wiarygodność danych</span>
+      <h3>174 lajki na jeden komentarz</h3>
+      <dl class="ev">
+        <dt>20,8%</dt><dd>Twoich wyświetleń kończy się lajkiem. Post feed: <strong>3 211 wyświetleń, 668 lajków</strong>. Norma organiczna: <strong>3–8%</strong>.</dd>
+        <dt>174:1</dt><dd>stosunek lajków do komentarzy. Zdrowe konto tej wielkości: <strong>20–50:1</strong>.</dd>
+        <dt>19/73</dt><dd>postów ma <strong>zero</strong> komentarzy — przy średniej 505 lajków na post.</dd>
+        <dt>12</dt><dd>najwyższa liczba komentarzy, jaką kiedykolwiek zebrał Twój post. Rekord lajków: 1074.</dd>
+      </dl>
+      <p>To jest ta liczba, która przesądza sprawę. Co piąte wyświetlenie zamienia się w lajk — trzy do siedmiu razy powyżej tego, co robi naprawdę dobra treść. A jednocześnie prawie nikt nie pisze komentarza.</p>
+      <p>Ludzie, którzy klikają serce, ale nigdy nie piszą ani słowa, nie oglądają Twoich treści. Oni je <strong>odklikują</strong>.</p>
+      <p>W czterech rolkach masz hashtagi <strong>#zasięgi #zasiegi</strong>. To znacznik grup podbijających zasięgi. Sama je tam wpisałaś — więc oboje wiemy, skąd część tych liczb pochodzi.</p>
+    </div>
+
+    <div class="alarm">
+      <span class="tag">Alarm 02 · Dowód</span>
+      <h3>Twoje rolki dzielą się na dwa osobne światy</h3>
+      <div class="chart">
+        <div class="bars">
+          <div class="bar hi" style="height:100%"><span>981</span></div>
+          <div class="bar hi" style="height:84%"><span>826</span></div>
+          <div class="bar hi" style="height:31%"><span>307</span></div>
+          <div class="bar hi" style="height:28%"><span>277</span></div>
+          <div class="bar lo" style="height:2%"></div>
+          <div class="bar lo" style="height:1.5%"></div>
+          <div class="bar lo" style="height:1.5%"></div>
+          <div class="bar lo" style="height:1.5%"></div>
+          <div class="bar lo" style="height:1.5%"></div>
+          <div class="bar lo" style="height:1.5%"></div>
+          <div class="bar lo" style="height:1.5%"></div>
+          <div class="bar lo" style="height:1.5%"></div>
+        </div>
+        <div class="chart-legend">
+          <span class="l-hi">4 rolki<b>598 lajków śr.</b></span>
+          <span class="l-lo">8 rolek<b>4,9 lajka śr.</b></span>
+        </div>
+      </div>
+      <p>Osiem rolek zebrało kolejno: <span class="num">16, 7, 4, 4, 3, 3, 2, 0</span> lajków. Przy 5 012 obserwujących.</p>
+      <p>Statystyki tłumaczą dlaczego. Z <span class="num">130 956</span> wyświetleń w 90 dniach <strong>122 000 poszło na posty</strong> — czyli <strong>93%</strong>. Na wszystkie rolki razem zostało niecałe <span class="num">9 000</span>.</p>
+      <dl class="ev">
+        <dt>3 211</dt><dd>średnia wyświetleń na post w feedzie.</dd>
+        <dt>814</dt><dd>średnia wyświetleń na rolkę — <strong>czterokrotnie mniej</strong>.</dd>
+      </dl>
+      <p>Robisz rolki, bo „trzeba robić rolki". U Ciebie one po prostu nie działają — a każda zabiera czas, który zwróciłby się w karuzeli.</p>
+    </div>
+
+    <div class="alarm">
+      <span class="tag">Alarm 03 · Wzrost</span>
+      <h3>Urosłaś o 156% i straciłaś zasięg</h3>
+      <dl class="ev">
+        <dt>+3 056</dt><dd>obserwatorów netto w 90 dni. Z <strong>1 956 na 5 012</strong> — wzrost o 156%.</dd>
+        <dt>10 381</dt><dd>widzów w tym samym czasie. Czyli <strong>29,4%</strong> wszystkich, którzy Cię zobaczyli, zaczęło Cię obserwować. Norma: <strong>0,5–2%</strong>.</dd>
+        <dt>12,6</dt><dd>wyświetleń na jednego widza. Ta sama garstka kont ogląda wszystko, co wrzucasz.</dd>
+      </dl>
+      <p>Tu jest sprzeczność, której nie da się obejść. Przez te same 90 dni, w których <strong>potroiłaś liczbę obserwujących</strong>, Twój wykres wyświetleń spadł z 5,1 tys. dziennie do niemal zera.</p>
+      <p>Prawdziwi obserwatorzy działają odwrotnie: każdy nowy podnosi zasięg następnego posta. Jeśli dokładasz trzy tysiące ludzi, a zasięg leci w dół, to znaczy, że ci ludzie <strong>nie oglądają</strong>. Instagram to widzi szybciej niż Ty i przestaje pokazywać Cię komukolwiek.</p>
+      <p><strong>Te trzy tysiące obserwujących nie są aktywem. Są kosztem</strong> — obniżają wskaźnik, po którym algorytm ocenia, czy warto Cię dystrybuować.</p>
+    </div>
+
+    <div class="alarm good">
+      <span class="tag">Alarm 04 · Marka · KOREKTA</span>
+      <h3>Weszłaś w kadr — i to jest Twoja najlepsza treść</h3>
+      <p>Napisałem wcześniej, że w 73 publikacjach nie ma ani jednej Twojej twarzy. <strong>To była moja pomyłka</strong> — wyciągnąłem to z podpisów i metadanych, nie widząc zdjęć. W rolce „Koreańskie trio" jesteś przed kamerą.</p>
+      <p>I ta rolka bije wszystko inne w metryce, która naprawdę się liczy:</p>
+      <dl class="ev">
+        <dt>9</dt><dd>zapisów — <strong>więcej niż wszystkie inne posty razem po korekcie na zasięg</strong>. Reszta ma po 3–4.</dd>
+        <dt>76</dt><dd>zapisów i udostępnień na 1000 wyświetleń. Twój post z 2,2 tys. wyświetleń: <strong>5,5</strong>. To czternastokrotna różnica.</dd>
+        <dt>8,0%</dt><dd>lajków na wyświetlenie — <strong>jedyny wynik w normie</strong> (3–8%) w całym koncie. Reszta: 25–39%.</dd>
+      </dl>
+      <p>Ta rolka ma najmniej lajków ze wszystkiego (18) i jednocześnie najwięcej zapisów. To nie przypadek — to różnica między treścią, którą ktoś odklikuje, a treścią, którą ktoś <strong>chce zachować</strong>.</p>
+      <p><strong>Masz odpowiedź na pytanie „co robić dalej" i sama ją nagrałaś.</strong></p>
+    </div>
+
+    <div class="alarm amber">
+      <span class="tag">Alarm 05 · Wiarygodność recenzji</span>
+      <h3>Recenzje, w których nic nigdy nie jest złe</h3>
+      <p>Oceny, które wystawiłaś: <span class="num">9/10</span>, <span class="num">9,5/10</span>, <span class="num">4/5</span>. Ani jednego produktu, którego nie polecasz. Jeden post na dziesięć ma sekcję z wadami — i nawet tam „wadą" jest to, że <em>zapach jest zbyt subtelny</em>.</p>
+      <p>Recenzentka, która nigdy nie mówi „nie kupuj", nie jest recenzentką. Jest kanałem dystrybucji materiałów prasowych — i widzowie wyczuwają to szybciej, niż myślisz.</p>
+    </div>
+
+    <div class="alarm amber">
+      <span class="tag">Alarm 06 · Pozycjonowanie</span>
+      <h3>Algorytm nie wie, komu Cię pokazywać</h3>
+      <p>W 6 miesięcy: proszek do prania, kosmetyki dla dzieci, świece do masażu, chusteczki nawilżane, krem do rąk, maść nagietkowa, płyn do paneli, kapsułki do zmywarki, koreańska pielęgnacja.</p>
+      <p>To cztery różne konta w jednym: <strong>sprzątanie</strong>, <strong>kosmetyki</strong>, <strong>dzieci</strong>, <strong>dom</strong>. Instagram uczy się, komu podsuwać Twoje treści, na podstawie tego, kto reaguje. Przy takim rozstrzale nigdy się nie nauczy.</p>
+    </div>
+
+    <div class="alarm good">
+      <span class="tag">To jednak działa · korekta</span>
+      <h3>Twoje posty naprawdę docierają do obcych ludzi</h3>
+      <dl class="ev">
+        <dt>55,7%</dt><dd>wyświetleń pochodzi od <strong>osób, które Cię nie obserwują</strong> — blisko 73 tys. w 90 dni. To zdrowy wynik dystrybucji.</dd>
+        <dt>3 211</dt><dd>średnia wyświetleń na post w feedzie. To jest realny zasięg, nie iluzja.</dd>
+      </dl>
+      <p>Zanim zobaczyłem Statystyki, napisałem, że Twój prawdziwy zasięg organiczny to kilka lajków. <strong>Myliłem się co do postów</strong> — one docierają do ludzi, i to w większości spoza Twoich obserwujących. Instagram podaje je dalej, bo tematy trafiają w wyszukiwania.</p>
+      <p>Zawyżone są <strong>reakcje i obserwatorzy</strong>, nie sam zasięg. To ważne rozróżnienie, bo znaczy, że warsztat i dobór tematów działają. Zepsuta jest warstwa, którą doklejasz na wierzch.</p>
+    </div>
+  </section>
+
+  <section class="sect">
+    <p class="eyebrow">Krok 2 · Ranking wg lajków + komentarzy (waga ×5)</p>
+    <h2>TOP 10 — co naprawdę zadziałało</h2>
+    <p>Pasek pod numerem pokazuje wynik względem najlepszego postu. To ranking <strong>po lajkach</strong>, czyli po metryce, której nie ufam — czytaj go jako analizę rzemiosła w podpisach. Właściwy ranking, po zapisach i udostępnieniach, jest <strong>niżej</strong> i wygląda zupełnie inaczej.</p>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">01</div>
+        <div class="card-head">
+          <h4>Persil Active Gel — biała od pierwszego do ostatniego prania</h4>
+          <div class="chips"><span class="chip stat">1 074 ❤</span><span class="chip">1 komentarz</span><span class="chip">Karuzela</span><span class="chip">Pranie · #reklama</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:100%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Obietnica rezultatu z ramą czasową — „od pierwszego do ostatniego prania"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span>Hak obiecuje <strong>efekt</strong>, nie opisuje produktu. Problem (szarzejąca biel) ma dosłownie każdy, kto ma pralkę. Karuzela to Twój najmocniejszy format w ogóle — średnio 794 lajki wobec 565 na zdjęciach.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span>Piszesz o bieli, a pokazujesz butelkę. <strong>Nie ma kadru „przed / po"</strong> — czyli jedynego dowodu, po który ludzie sięgają. 1 komentarz na 1074 lajki, bo nie zadałaś żadnego pytania. Podpis to wypracowanie w czterech akapitach.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">02</div>
+        <div class="card-head">
+          <h4>Kosmetyki Pszczółka Maja — słodka pielęgnacja</h4>
+          <div class="chips"><span class="chip stat">1 013 ❤</span><span class="chip">8 komentarzy</span><span class="chip">Zdjęcie</span><span class="chip">Dzieci</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:94%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Emocja + rozpoznawalna marka z dzieciństwa — „produkty, które wywołują uśmiech"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span>Pszczółka Maja robi robotę za Ciebie — nostalgia rodzica plus ekscytacja dziecka w jednym kadrze. Temat „dziecko samo chce myć zęby" to <strong>realny ból</strong>, nie cecha produktu. Najwyższy wynik komentarzy w całym TOP 3.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span><strong>Wkleiłaś tekst z ChatGPT bez czyszczenia.</strong> W podpisie zostały surowe znaczniki — <span class="num">#</span> na początku, <span class="num">##</span> przed sekcjami, <span class="num">**gwiazdki**</span> zamiast pogrubienia. Instagram tego nie renderuje: widzowie widzą krzaki. Do tego ocena 9/10 bez ani jednej wady.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">03</div>
+        <div class="card-head">
+          <h4>WEWI — siedem wariantów chusteczek</h4>
+          <div class="chips"><span class="chip reel">Reels</span><span class="chip stat">981 ❤</span><span class="chip">2 komentarze</span><span class="chip">Higiena</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:91%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span><strong>Brak haka.</strong> Podpis startuje od nazwy wariantu: „🌸 WEWI Orchid"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span>Jedyna rolka z realnym wynikiem. Format „7 wariantów w jednym filmie" daje widzowi <strong>powód, żeby dooglądać do końca</strong> — bo szuka swojego. To jest dokładnie ta mechanika retencji, której potrzebujesz.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span>Podpis to <strong>katalog producenta</strong>, nie Twoja opinia — siedem akapitów w tonie PR. Brak werdyktu: nie mówisz, który jest najlepszy. „Który z siedmiu kupiłabym ponownie" to gotowy hak, który zostawiłaś na stole.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">04</div>
+        <div class="card-head">
+          <h4>CandleLand — świeca do masażu</h4>
+          <div class="chips"><span class="chip stat">963 ❤</span><span class="chip">5 komentarzy</span><span class="chip">Zdjęcie</span><span class="chip">Dom · relaks</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:90%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Pytanie retoryczne + transformacja — „domowe SPA zamknięte w świecy?"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span>Jedyny hak w TOP 10 zbudowany na <strong>pytaniu</strong>. Sam mechanizm produktu jest ciekawostką — świeca topi się w ciepły olejek do masażu. To gotowy materiał na „reveal".</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span>Ten reveal <strong>opisujesz słowami zamiast go pokazać</strong>. Roztapiający się wosk polewany na dłoń to trzysekundowe wideo, które zatrzymuje kciuk — a Ty dałaś zdjęcie zamkniętego słoiczka. Podpis kończy się przypadkowym <span class="num">:::</span> po kopiuj-wklej.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">05</div>
+        <div class="card-head">
+          <h4>Mill Clean Kuchnia — balsam czyszczący</h4>
+          <div class="chips"><span class="chip stat">968 ❤</span><span class="chip">4 komentarze</span><span class="chip">Zdjęcie</span><span class="chip">Sprzątanie</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:90%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Obietnica z liczbą i czasem — „Jeden spray, kilka minut i kuchnia odzyskuje blask"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span><strong>Najlepszy hak, jaki napisałaś przez pół roku.</strong> Ma liczbę, ma czas, ma efekt. I jako jedyny podpis w całym koncie zaczyna się od <strong>sceny</strong>, nie od produktu — „kuchnia wygląda, jakby przeszło przez nią tornado". Tam ludzie rozpoznają siebie.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span>To tornado istnieje <strong>wyłącznie w tekście</strong>. Na zdjęciu stoi czysta butelka na czystym blacie. Brudna płyta to najmocniejszy materiał, jaki masz w domu za darmo — i konsekwentnie go nie pokazujesz.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">06</div>
+        <div class="card-head">
+          <h4>Świeca chocolate cherry</h4>
+          <div class="chips"><span class="chip stat">934 ❤</span><span class="chip">6 komentarzy</span><span class="chip">Zdjęcie</span><span class="chip">Dom · zapachy</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:87%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Nastrój, bez konkretu — „Zapach, który tworzy niesamowity klimat"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span>Jeden z nielicznych postów z <strong>prawdziwym pytaniem</strong> na końcu („jakie zapachy lubicie najbardziej?") — pojedyncze, konkretne, łatwe do odpowiedzi. Tak się buduje komentarze.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span><strong>Zapachu nie da się pokazać na zdjęciu</strong> — to najgorszy możliwy temat na format statyczny. Hak nie mówi nic konkretnego: „niesamowity klimat" pasuje do dowolnej świecy na świecie. I mimo bezpośredniego pytania — 6 komentarzy przy 934 lajkach.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">07</div>
+        <div class="card-head">
+          <h4>Maść nagietkowa — klasyk, który wraca</h4>
+          <div class="chips"><span class="chip stat">917 ❤</span><span class="chip">6 komentarzy</span><span class="chip">Zdjęcie</span><span class="chip">Naturalna pielęgnacja</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:85%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Autorytet kategorii — „klasyk, który zawsze wraca"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span>Produkt <strong>tani, dostępny i znany</strong> — najszersza możliwa grupa odbiorców, zero bariery wejścia. Lista zastosowań (podrażnienia, przesuszenie, otarcia) to dokładnie ten typ treści, który ludzie <strong>zapisują na potem</strong>. Podpis krótszy i przez to czytelniejszy.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span>Drugą linijkę spalasz na „Pierwsza recenzja w Karolina Atelier" — to informacja <strong>o Tobie</strong>, nie korzyść dla widza. Nikt spoza Twoich obserwujących nie zostaje dla tego zdania. Do tego zdjęcie samej tubki: zero pokazanego zastosowania.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">08</div>
+        <div class="card-head">
+          <h4>Organic Life — krem do rąk regenerujący</h4>
+          <div class="chips"><span class="chip stat">898 ❤</span><span class="chip">6 komentarzy</span><span class="chip">Zdjęcie</span><span class="chip">Kosmetyki</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:84%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Sama nazwa produktu — „Recenzja kremu do rąk Organic Life Regenerujący"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span><strong>Jedyny post w TOP 10 z osobną sekcją „Minusy"</strong> — i to widać w strukturze tekstu. Skład (100% vegan) działa jak filtr zakupowy. Jedyny post z CTA „oznacz kogoś, kto szuka kremu" — a to CTA, które faktycznie generuje zasięg.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span>Hak to <strong>etykieta produktu</strong>. Kto nie zna marki, przewija dalej — a nie zna jej prawie nikt. I te minusy są pozorne: „zapach zbyt subtelny" to komplement przebrany za wadę.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">09</div>
+        <div class="card-head">
+          <h4>Mill Clean „Skarby Lasu"</h4>
+          <div class="chips"><span class="chip stat">872 ❤</span><span class="chip">8 komentarzy</span><span class="chip">Zdjęcie</span><span class="chip">Sprzątanie</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:81%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>Przeramowanie — „sprzątanie może być przyjemniejsze, kiedy w domu pięknie pachnie"</div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span>Przeramowanie <em>obowiązek → rytuał</em> to <strong>Twój najlepszy powtarzalny kąt</strong>. Sprzedajesz nastrój, nie chemię. 8 komentarzy — powyżej Twojej mediany.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span><strong>Trzeci post o Mill Clean w cztery dni</strong> (10 i 11 maja). Kanibalizujesz własny zasięg i nużysz obserwujących. Emoji co drugie słowo rozbija czytelność. Na końcu trzy prośby naraz — „zostawcie ❤️, komentarz i udostępnijcie" — czyli w praktyce żadna.</div></div>
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-top">
+        <div class="rank">10</div>
+        <div class="card-head">
+          <h4>Mill Clean — balsam do paneli i drewna</h4>
+          <div class="chips"><span class="chip stat">877 ❤</span><span class="chip">7 komentarzy</span><span class="chip">Zdjęcie</span><span class="chip">Sprzątanie</span></div>
+        </div>
+      </div>
+      <div class="signal"><i style="width:81%"></i></div>
+      <div class="hookrow"><span class="lab">Typ haka</span>„Sprzątanie też może być przyjemne" — <strong>ten sam hak co dzień wcześniej</strong></div>
+      <div class="lines">
+        <div class="line y"><span class="m">✓</span><div><span class="lab">Działa</span><strong>„Aż do 22 myć"</strong> — jedyna twarda liczba w całym Twoim koncie przez pół roku. Podpis krótki i skanowalny: trzy odhaczone punkty zamiast eseju. To dowód, że długi tekst nie jest Ci potrzebny.</div></div>
+        <div class="line n"><span class="m">✕</span><div><span class="lab">Blokuje zasięg</span>Ta liczba <strong>jest zakopana w środku</strong>. „22 mycia z jednej butelki" to hak, który zatrzymuje kciuk — a Ty otwierasz zdaniem odklejonym z wczorajszego posta. Zmarnowana pierwsza linijka.</div></div>
+      </div>
+    </article>
+  </section>
+
+  <section class="sect">
+    <p class="eyebrow">Właściwy ranking · zakładka Zawartość, 6 ostatnich publikacji</p>
+    <h2>Po zapisach i udostępnieniach wygrywa co innego</h2>
+    <p>To jest ranking, o który prosiłaś na początku. Kolejność wychodzi <strong>odwrotna</strong> do tej po lajkach — a to dlatego, że lajki mierzą coś innego niż zamiar zakupu.</p>
+
+    <div class="chart">
+      <table style="width:100%;border-collapse:collapse;font-size:13.5px;">
+        <thead>
+          <tr style="border-bottom:1px solid var(--line);">
+            <th style="text-align:left;padding:8px 6px 8px 0;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:500;">Publikacja</th>
+            <th style="text-align:right;padding:8px 6px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:500;">Wyśw.</th>
+            <th style="text-align:right;padding:8px 6px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:500;">Lajk %</th>
+            <th style="text-align:right;padding:8px 0 8px 6px;font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ok);font-weight:500;">Zap.+ud. /1000</th>
+          </tr>
+        </thead>
+        <tbody style="font-variant-numeric:tabular-nums;">
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);"><strong>Koreańskie trio</strong><br><span style="color:var(--ok);font-family:var(--f-mono);font-size:11px;">rolka · Twoja twarz</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">224</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--ok);">8,0%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--ok);font-size:16px;font-weight:600;">75,9</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">Sunny Care Orange<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">rolka · 4 dni</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">781</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">35,5%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--muted);font-size:16px;">15,4</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">Sunny Care Orange<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">rolka · 1 tydz.</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">779</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">39,4%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--muted);font-size:16px;">14,1</td>
+          </tr>
+          <tr style="border-bottom:1px solid var(--line);">
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">@equilibra_pl<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">post · 1 tydz.</span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">1 300</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">31,3%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--muted);font-size:16px;">9,2</td>
+          </tr>
+          <tr>
+            <td style="padding:10px 6px 10px 0;color:var(--ink);">Maybelline Express<br><span style="color:var(--dim);font-family:var(--f-mono);font-size:11px;">post · 4 tyg. · <strong style="color:var(--muted);">najwięcej wyświetleń</strong></span></td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--muted);">2 200</td>
+            <td style="text-align:right;padding:10px 6px;font-family:var(--f-mono);color:var(--bad);">24,7%</td>
+            <td style="text-align:right;padding:10px 0 10px 6px;font-family:var(--f-mono);color:var(--bad);font-size:16px;">5,5</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="alarm">
+      <span class="tag">Alarm 07 · Zapisy</span>
+      <h3>65 lajków na jeden zapis</h3>
+      <dl class="ev">
+        <dt>24</dt><dd>zapisy łącznie na sześciu ostatnich publikacjach. Lajków w tym samym czasie: <strong>1 552</strong>.</dd>
+        <dt>0,14%</dt><dd>zapisów na wyświetlenie przy poście z 2,2 tys. zasięgu (3 zapisy). Zdrowa recenzja kosmetyczna: <strong>1–3%</strong>.</dd>
+      </dl>
+      <p>Prowadzisz konto recenzenckie. Zapis to jedyny sygnał, że ktoś naprawdę zamierza kupić — zapisuje, żeby wrócić w sklepie. <strong>Trzy zapisy na 2 200 wyświetleń oznaczają, że nikt nie traktuje tych recenzji jako podpowiedzi zakupowej.</strong></p>
+      <p>I to jest liczba, którą marka sprawdza przed podpisaniem współpracy — nie lajki.</p>
+    </div>
+
+    <div class="alarm">
+      <span class="tag">Alarm 08 · Relacje</span>
+      <h3>Twoje relacje ogląda osiem osób</h3>
+      <dl class="ev">
+        <dt>10 / 8 / 8</dt><dd>wyświetleń na trzech ostatnich relacjach. Przy <strong>5 012 obserwujących</strong>.</dd>
+        <dt>0,2%</dt><dd>obserwujących widzi Twoje relacje. Konto z żywą społecznością: <strong>5–15%</strong>.</dd>
+      </dl>
+      <p>Relacje to miejsce, gdzie widać prawdę o publiczności, bo Instagram pokazuje je głównie osobom, które już Cię obserwują. Nie ma tam algorytmicznej dystrybucji do obcych, która maskuje wynik w feedzie.</p>
+      <p><strong>Osiem wyświetleń na pięć tysięcy obserwujących to najczystszy dowód w całym tym raporcie.</strong> Reszta Twoich liczb jest sporna — ta nie.</p>
+    </div>
+  </section>
+
+  <section class="sect">
+    <p class="eyebrow">Wzorce · cała próba 73 publikacji</p>
+    <h2>Co dane mówią ponad rankingiem</h2>
+
+    <div class="alarm amber">
+      <span class="tag">Format</span>
+      <h3>Karuzele wygrywają, a robisz ich najmniej</h3>
+      <dl class="ev">
+        <dt>794</dt><dd>średnia lajków na <strong>karuzelę</strong> — a zrobiłaś ich tylko 5 z 73.</dd>
+        <dt>565</dt><dd>średnia na pojedyncze zdjęcie. 56 sztuk — Twój domyślny format.</dd>
+        <dt>106</dt><dd>średnia przy podpisie krótszym niż 200 znaków. Przy dłuższym: <strong>ponad 500</strong>.</dd>
+      </dl>
+      <p>Najlepszy format robisz najrzadziej, a najsłabszy — najczęściej. To jest do naprawienia w jeden tydzień.</p>
+    </div>
+
+    <div class="alarm amber">
+      <span class="tag">Rytm publikacji</span>
+      <h3>Rozpędziłaś się i zgasłaś</h3>
+      <dl class="ev">
+        <dt>24</dt><dd>publikacje w maju — Twój szczyt. Wykres wyświetleń bije wtedy <strong>5,1 tys. dziennie</strong>.</dd>
+        <dt>17</dt><dd>w czerwcu. Potem 9 w lipcu.</dd>
+        <dt>3</dt><dd>w sierpniu. Wyświetlenia dzienne <strong>przy zerze</strong>, średnie lajki z 691 na 200.</dd>
+      </dl>
+      <p>Wykres ze Statystyk to jedna długa równia w dół od połowy maja. Przestałaś publikować i wynik poszedł za tym natychmiast — bez żadnego bufora, jaki dałaby prawdziwa społeczność.</p>
+    </div>
+  </section>
+
+  <section class="sect">
+    <p class="eyebrow">Krok 3 · Plan naprawczy</p>
+    <h2>Siedem rzeczy, w tej kolejności</h2>
+    <ol class="todo">
+      <li><span class="n">1</span><div><h5>Odetnij sztuczne zasięgi</h5><p>Wypisz się z grup podbijających, usuń #zasięgi i #zasiegi. Przez pierwsze dwa tygodnie liczby runą i to jest cel — musisz zobaczyć swój prawdziwy punkt startu, żeby cokolwiek zmierzyć.</p></div></li>
+      <li><span class="n">2</span><div><h5>Zejdź z rolek na karuzele</h5><p>93% Twoich wyświetleń idzie na posty. Rolka robi średnio 814 wyświetleń, post 3 211, a karuzela ma najwyższe reakcje ze wszystkiego. Przestań wkładać czas w format, który u Ciebie nie działa.</p></div></li>
+      <li><span class="n">3</span><div><h5>Wybierz jeden filar na 90 dni</h5><p>Cztery tematy naraz to cztery martwe konta. Twoje najlepsze rzemiosło jest w sprzątaniu — mocne haki, realne problemy, przeramowanie na rytuał. Zostań przy nim.</p></div></li>
+      <li><span class="n">4</span><div><h5>Rób więcej tego, co w „Koreańskim trio"</h5><p>Ta rolka ma czternaście razy lepszy wynik zapisów na wyświetlenie niż Twój najszerzej dotarty post — bo jesteś w kadrze i mówisz. Nie eksperyment, tylko Twój nowy format bazowy.</p></div></li>
+      <li><span class="n">5</span><div><h5>Pokazuj „przed", nie opisuj go</h5><p>Piszesz o tornadzie w kuchni i o szarej bieli, a publikujesz packshoty. Brud, plama, zaciek na kabinie — to jest darmowy materiał, który leży u Ciebie w domu. Sfilmuj brudne, potem czyste.</p></div></li>
+      <li><span class="n">6</span><div><h5>Skrytykuj jeden produkt publicznie</h5><p>Ani jednej negatywnej opinii w 73 postach. Jedna szczera recenzja „nie kupuj tego" zbuduje więcej zaufania niż kolejne pięćdziesiąt dziewiątek na dziesięć.</p></div></li>
+      <li><span class="n">7</span><div><h5>Przestań patrzeć na lajki, zacznij na zapisy</h5><p>Jedyna liczba, którą warto śledzić tydzień do tygodnia: zapisy na 1000 wyświetleń. Twój punkt startu to 5–15. Rolka z Twoją twarzą zrobiła 76. Celuj w 20 na każdej publikacji.</p></div></li>
+    </ol>
+  </section>
+
+  <section class="sect">
+    <p class="eyebrow">Werdykt</p>
+    <div class="verdict">
+      <p class="big">Twoje treści działają. <b>Twoje statystyki nie.</b></p>
+      <p>To jest lepsza diagnoza, niż się spodziewałem po pierwszym podejściu. Posty robią po 3 200 wyświetleń, ponad połowa idzie do ludzi spoza obserwujących, a Instagram sam Cię podaje dalej. „Jeden spray, kilka minut i kuchnia odzyskuje blask" oraz „aż do 22 myć" to zdania kogoś, kto ten format czuje. <strong>Fundament jest.</strong></p>
+      <p>Zepsute jest to, co dokleiłaś na wierzch. Co piąte wyświetlenie kończy się lajkiem przy 174 lajkach na jeden komentarz. Trzy tysiące nowych obserwujących w kwartale, w którym zasięg spadł do zera. Te liczby nie idą razem i każdy, kto spojrzy uważniej, to zobaczy — marki sprawdzają dziś dokładnie te dwie proporcje.</p>
+      <p><strong>Najgorsze jest to, że sztuczna warstwa nie tylko nic nie daje — ona aktywnie tłumi to, co działa.</strong> Trzy tysiące kont, które nie oglądają, obniżają wskaźnik decydujący o Twojej dystrybucji. Płacisz zasięgiem za liczbę w nagłówku profilu. Twoje relacje ogląda osiem osób — to jest prawdziwy rozmiar Twojej społeczności.</p>
+      <p>Ale najważniejsze zdanie w tym raporcie jest inne. <strong>Rolka, w której pokazałaś twarz, ma najmniej lajków i najwięcej zapisów ze wszystkiego, co zrobiłaś.</strong> Osiem procent lajków na wyświetlenie — jedyna normalna liczba w całym koncie. Siedemdziesiąt sześć zapisów na tysiąc wyświetleń, czternaście razy więcej niż Twój najszerzej dotarty post.</p>
+      <p>Nie musisz zgadywać, co robić dalej. <strong>Nagrałaś to wczoraj.</strong></p>
+    </div>
+
+    <p class="foot">
+      <b>Źródła:</b> publiczne API Instagrama przez Windsor.ai (73 publikacje, 20.02–11.08.2026) + Twoje Statystyki z aplikacji, zakładka Ogólne, 90 dni do 10.08.2026.<br>
+      <b>Konto:</b> @karolina_atelier_ — nie @karolajna.86, które podałaś. To konto ma podpięty Twój adres e-mail, więc analizuję właśnie je.<br>
+      <b>Dwa rankingi:</b> TOP 10 stoi na lajkach + (komentarze × 5), bo dla 73 publikacji tylko to mam. Ranking po zapisach i udostępnieniach obejmuje <b>tylko 6 ostatnich publikacji</b> — tyle widać w zakładce „Zawartość". Mała próba, więc traktuj kierunek jako mocny, a dokładne wartości jako wstępne.<br>
+      <b>Weryfikacja:</b> liczby ze Statystyk zgadzają się z danymi z API co do sztuki (Maybelline 543/12, equilibra 407/8, Sunny Care 277/2 i 307/3), więc oba źródła opisują to samo konto.<br>
+      <b>Normy porównawcze</b> (3–8% lajków na wyświetlenie, 0,5–2% konwersji na obserwatora, 20–50:1 lajki do komentarzy) to typowe zakresy dla kont lifestyle/beauty tej wielkości, nie oficjalne dane Instagrama. Żadna liczba w tym raporcie nie została oszacowana ani zmyślona.
+    </p>
+  </section>
+
+</div>
