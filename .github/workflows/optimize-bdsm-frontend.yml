@@ -49,7 +49,11 @@ jobs:
               if marker in text:
                   continue
               module = Path(path).read_text(encoding='utf-8')
-              text = text.replace('</body>', '<script>\n' + module + '\n</script>\n</body>')
+              block = '<script>\n' + module + '\n</script>\n'
+              pos = text.rfind('</body>')
+              if pos < 0:
+                  raise RuntimeError('Missing final body tag')
+              text = text[:pos] + block + text[pos:]
           index.write_text(text, encoding='utf-8')
           PY
       - name: Commit optimized index
