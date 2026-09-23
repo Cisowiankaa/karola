@@ -31,12 +31,13 @@ patterns = [
 for pattern in patterns:
     text = re.sub(pattern, '', text)
 
+# Remove every previously generated inline runtime/safety block, not just the first one.
 for start, end in [
     ('<!-- BDSM_RUNTIME_INLINE_START -->', '<!-- BDSM_RUNTIME_INLINE_END -->'),
     ('<!-- BDSM_SAFETY_TOPBAR_START -->', '<!-- BDSM_SAFETY_TOPBAR_END -->'),
     ('<!-- BDSM_EMAIL_HISTORY_V4_START -->', '<!-- BDSM_EMAIL_HISTORY_V4_END -->'),
 ]:
-    if start in text and end in text:
+    while start in text and end in text:
         a = text.index(start)
         b = text.index(end, a) + len(end)
         text = text[:a] + text[b:]
@@ -105,9 +106,12 @@ safety = r'''<!-- BDSM_SAFETY_TOPBAR_START -->
 
 mods = [sync_queue_guard, sync, history, email_panel, offences, deadlines, education, education_library, written_notes, timeline, timeline_ui_v2, case_controls, today_dashboard, weekly_plan, weekly_carryover_v2, month_calendar, day_agenda, day_agenda_groups_v2, agenda_cloud, daily_reports, hourly_reports, cloud_status]
 runtime = '<!-- BDSM_RUNTIME_INLINE_START -->\n' + ''.join(f'<script>\n{x}\n</script>\n' for x in mods) + '<!-- BDSM_RUNTIME_INLINE_END -->'
-
 block = '\n' + runtime + '\n' + safety + '\n'
-text = text.replace('</body>', block + '</body>')
+
+# IMPORTANT: inject only before the final real closing body tag.
+pos = text.rfind('</body>')
+if pos == -1:
+    raise RuntimeError('Missing final </body> tag')
+text = text[:pos] + block + text[pos:]
 index.write_text(text, encoding='utf-8')
-print('Optimized BDSM index: sync + timeline v2 + weekly carryover + grouped day agenda + reports + cloud status + safety')
-# build trigger: grouped day agenda v2
+print('Optimized BDSM index safely: runtime injected before final body tag only')
