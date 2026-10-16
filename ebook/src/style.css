@@ -1,0 +1,318 @@
+/* =========================================================
+   E-book: Biznes Oriflame / social selling
+   Format: A5 (148 x 210 mm), druk cyfrowy / czytanie na ekranie
+   ========================================================= */
+
+:root {
+  --ink:        #2A2119;
+  --ink-soft:   #4A4038;
+  --muted:      #776B5E;
+  --accent:     #8C3B5A;
+  --accent-dk:  #5E2540;
+  --gold:       #A8792F;
+  --cream:      #FAF5EF;
+  --cream-dp:   #F3E9DC;
+  --rule:       #E3D5C5;
+  --paper:      #FFFFFF;
+}
+
+/* ---------- strony ---------- */
+@page {
+  size: 148mm 210mm;
+  margin: 18mm 16mm 20mm 16mm;
+}
+@page cover   { margin: 0; }
+@page divider { margin: 0; }
+
+* { box-sizing: border-box; }
+
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+  margin: 0;
+  font-family: "Bitstream Charter", "DejaVu Serif", Georgia, serif;
+  font-size: 10.4pt;
+  line-height: 1.62;
+  color: var(--ink);
+  background: var(--paper);
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
+p { margin: 0 0 0.72em; text-align: justify; }
+p.first { text-indent: 0; }
+strong { color: var(--accent-dk); }
+em { font-style: italic; }
+a { color: var(--accent); text-decoration: none; }
+
+h1, h2, h3, h4, .kicker, .num, .cover *, .divider *, .toc * {
+  font-family: "DejaVu Sans", "Liberation Sans", Arial, sans-serif;
+}
+
+/* ---------- OKŁADKA ---------- */
+.cover {
+  page: cover;
+  page-break-after: always;
+  width: 148mm; height: 210mm;
+  background: var(--accent-dk);
+  color: #fff;
+  padding: 26mm 18mm 20mm;
+  position: relative;
+  display: block;
+}
+.cover-rule { width: 26mm; height: 2.6pt; background: var(--gold); margin-bottom: 11mm; }
+.cover .eyebrow {
+  font-size: 8.2pt; letter-spacing: 0.26em; text-transform: uppercase;
+  color: #E8C98E; margin-bottom: 7mm;
+}
+.cover h1 {
+  font-size: 27pt; line-height: 1.16; margin: 0 0 6mm;
+  font-weight: 700; letter-spacing: -0.01em;
+}
+.cover h1 .thin { font-weight: 300; display: block; font-size: 20pt; color: #EBD9C4; }
+.cover .sub {
+  font-size: 10.6pt; line-height: 1.5; color: #E6D5C2; font-weight: 300;
+  max-width: 90mm; text-align: left;
+}
+.cover .foot {
+  position: absolute; left: 18mm; right: 18mm; bottom: 18mm;
+  border-top: 0.6pt solid rgba(255,255,255,0.28); padding-top: 5mm;
+  font-size: 8.4pt; letter-spacing: 0.13em; text-transform: uppercase; color: #D9C4AC;
+  display: flex; justify-content: space-between;
+}
+
+/* jasny wariant okładki — materiały bezpłatne */
+.cover--light { background: var(--cream-dp); color: var(--ink); }
+.cover--light .eyebrow { color: var(--gold); }
+.cover--light h1 { color: var(--accent-dk); }
+.cover--light h1 .thin { color: var(--accent); }
+.cover--light .sub { color: var(--ink-soft); }
+.cover--light .foot { color: var(--muted); border-top-color: rgba(0,0,0,0.14); }
+.cover--light .cover-rule { background: var(--accent); }
+
+/* karta pojedynczej wiadomości (materiał bezpłatny) */
+.msg { page-break-inside: avoid; margin-bottom: 7mm; }
+.msg-head {
+  display: flex; align-items: baseline; gap: 3mm;
+  border-bottom: 1.4pt solid var(--gold); padding-bottom: 2mm; margin-bottom: 3mm;
+}
+.msg-head .mn {
+  font-family: "DejaVu Sans", sans-serif; font-size: 15pt; font-weight: 700;
+  color: var(--gold); line-height: 1;
+}
+.msg-head h3 {
+  font-size: 11.4pt; margin: 0; color: var(--accent-dk); line-height: 1.25;
+}
+.msg .when {
+  font-size: 9.2pt; color: var(--muted); font-style: italic; margin-bottom: 3mm;
+}
+.msg .why { font-size: 9.4pt; margin-top: 3mm; }
+.msg .why b {
+  font-family: "DejaVu Sans", sans-serif; font-size: 7.6pt; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 1mm;
+}
+
+/* ---------- STRONA REDAKCYJNA ---------- */
+.legal { page-break-after: always; font-size: 8.6pt; color: var(--muted); line-height: 1.6; }
+.legal h2 { font-size: 9pt; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink); margin: 0 0 4mm; }
+.legal p { text-align: left; margin-bottom: 0.6em; }
+.legal .spacer { height: 55mm; }
+
+/* ---------- SPIS TREŚCI ---------- */
+.toc { page-break-after: always; }
+.toc h2 {
+  font-size: 15pt; letter-spacing: 0.02em; margin: 0 0 8mm;
+  color: var(--accent-dk); border-bottom: 2pt solid var(--gold);
+  padding-bottom: 3mm; display: inline-block;
+}
+.toc .part {
+  font-size: 8.4pt; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--gold); margin: 6mm 0 2.5mm; font-weight: 700;
+}
+.toc .item {
+  display: flex; align-items: baseline; gap: 3mm;
+  font-size: 9.4pt; margin-bottom: 1.6mm; color: var(--ink-soft);
+}
+.toc .item .n { color: var(--accent); font-weight: 700; min-width: 7mm; }
+.toc .plain {
+  font-size: 9.6pt; margin-bottom: 2mm; color: var(--ink-soft); font-weight: 700;
+  display: flex; align-items: baseline; gap: 3mm;
+}
+.toc .leader {
+  flex: 1 1 auto; border-bottom: 0.5pt dotted #CBBBA8;
+  margin: 0 1.5mm 0.9mm; min-width: 4mm;
+}
+.toc .pnum {
+  flex: 0 0 auto; font-size: 8.6pt; font-weight: 700;
+  color: var(--gold); font-variant-numeric: tabular-nums;
+}
+/* niewidoczne kotwice do numeracji spisu treści */
+.anch { font-size: 3pt; color: rgba(0,0,0,0.004); letter-spacing: 0; }
+
+/* ---------- PRZEKŁADKA CZĘŚCI ---------- */
+.divider {
+  page: divider;
+  page-break-before: always; page-break-after: always;
+  width: 148mm; height: 210mm;
+  background: var(--cream-dp);
+  padding: 78mm 22mm 0;
+  position: relative;
+}
+.divider .pn {
+  font-size: 8.4pt; letter-spacing: 0.28em; text-transform: uppercase;
+  color: var(--gold); font-weight: 700; margin-bottom: 5mm;
+}
+.divider h2 {
+  font-size: 22pt; line-height: 1.2; color: var(--accent-dk);
+  margin: 0 0 6mm; font-weight: 700;
+}
+.divider .d-rule { width: 22mm; height: 2.4pt; background: var(--accent); margin-bottom: 6mm; }
+.divider .d-sub { font-family: "Bitstream Charter", serif; font-size: 10.4pt; color: var(--ink-soft); line-height: 1.55; }
+
+/* ---------- ROZDZIAŁ ---------- */
+.chapter { page-break-before: always; }
+.ch-head { margin-bottom: 8mm; }
+.ch-head .num {
+  font-size: 8.4pt; letter-spacing: 0.24em; text-transform: uppercase;
+  color: var(--gold); font-weight: 700; margin-bottom: 2.5mm;
+}
+.ch-head h2 {
+  font-size: 17pt; line-height: 1.22; color: var(--accent-dk);
+  margin: 0 0 4mm; font-weight: 700;
+}
+.ch-head .ch-rule { width: 18mm; height: 2.2pt; background: var(--gold); }
+
+h3 {
+  font-size: 11.2pt; color: var(--accent-dk); margin: 7mm 0 2.5mm;
+  font-weight: 700; line-height: 1.32; page-break-after: avoid;
+}
+h4 {
+  font-size: 9.6pt; color: var(--ink); margin: 5mm 0 1.6mm;
+  font-weight: 700; letter-spacing: 0.02em; page-break-after: avoid;
+}
+
+.lead {
+  font-size: 11pt; line-height: 1.55; color: var(--ink-soft);
+  font-style: italic; margin-bottom: 6mm; text-align: left;
+}
+
+/* ---------- listy ---------- */
+ul, ol { margin: 0 0 0.85em; padding-left: 5.5mm; }
+li { margin-bottom: 0.34em; text-align: justify; }
+ul { list-style: none; padding-left: 5mm; }
+ul > li { position: relative; padding-left: 4mm; }
+ul > li::before {
+  content: "▪"; position: absolute; left: 0; top: -0.05em;
+  color: var(--gold); font-size: 8pt;
+}
+ol { padding-left: 6.5mm; }
+ol > li::marker { color: var(--accent); font-weight: 700; }
+ul ul { margin-top: 0.3em; margin-bottom: 0.3em; }
+
+/* ---------- ramki ---------- */
+.box {
+  border: 0.7pt solid var(--rule); background: var(--cream);
+  padding: 5mm 5.5mm 4mm; margin: 5mm 0 6mm;
+  page-break-inside: avoid;
+}
+.box .bt {
+  font-family: "DejaVu Sans", sans-serif; font-size: 7.8pt;
+  letter-spacing: 0.2em; text-transform: uppercase; font-weight: 700;
+  color: var(--accent); margin-bottom: 2.5mm;
+}
+.box p:last-child, .box ul:last-child, .box ol:last-child { margin-bottom: 0; }
+.box p, .box li { font-size: 9.7pt; }
+
+.box--exercise { border-left: 2.4pt solid var(--accent); }
+.box--exercise .bt { color: var(--accent); }
+
+.box--script { background: #F6F2FA; border-left: 2.4pt solid #7B5EA7; }
+.box--script .bt { color: #6A4E96; }
+.box--script p { font-family: "DejaVu Serif", serif; font-size: 9.4pt; font-style: italic; text-align: left; }
+
+.box--note { background: #FCF8EC; border-left: 2.4pt solid var(--gold); }
+.box--note .bt { color: var(--gold); }
+
+.box--fill {
+  background: #FFF4F4; border: 0.9pt dashed #C7534F; border-left: 2.6pt solid #C7534F;
+}
+.box--fill .bt { color: #B03B37; }
+
+.box--key { background: var(--accent-dk); border: none; color: #F5E9E0; }
+.box--key .bt { color: #E8C98E; }
+.box--key p, .box--key li { color: #F3E7DC; }
+.box--key strong { color: #FFF; }
+.box--key ul > li::before { color: #E8C98E; }
+
+/* pola do wypełnienia */
+.fill-line {
+  display: block; border-bottom: 0.7pt solid #C9B9A6;
+  height: 5.2mm; margin: 2.6mm 0;
+}
+
+/* ---------- checklisty ---------- */
+.check { list-style: none; padding-left: 0; margin: 3mm 0 5mm; }
+.check > li {
+  position: relative; padding-left: 7mm; margin-bottom: 1.5mm;
+  font-size: 9.7pt; text-align: left;
+}
+.check > li::before {
+  content: ""; position: absolute; left: 0; top: 0.28em;
+  width: 3.4mm; height: 3.4mm; border: 0.8pt solid var(--accent);
+  background: #fff;
+}
+
+/* ---------- tabele ---------- */
+table {
+  width: 100%; border-collapse: collapse; margin: 4mm 0 6mm;
+  font-size: 8.9pt; page-break-inside: avoid;
+}
+th {
+  background: var(--accent-dk); color: #fff; text-align: left;
+  padding: 2.2mm 2.6mm; font-family: "DejaVu Sans", sans-serif;
+  font-size: 7.9pt; letter-spacing: 0.06em; font-weight: 700;
+  text-transform: uppercase;
+}
+td { padding: 2.2mm 2.6mm; border-bottom: 0.6pt solid var(--rule); vertical-align: top; }
+tbody tr:nth-child(even) td { background: var(--cream); }
+table.compact td, table.compact th { padding: 1.7mm 2.2mm; font-size: 8.4pt; }
+
+/* WAŻNE: tabele o 5+ kolumnach nie mieszczą się w szerokości kolumny tekstu
+   przy domyślnym stopniu pisma. Chromium reaguje na to przeskalowaniem
+   CAŁEGO dokumentu w dół (~9%) — przez co pełnospadowe tła okładki
+   i przekładek przestają dochodzić do krawędzi strony. Dlatego szerokie
+   tabele dostają mniejszą czcionkę i węższe odstępy. Nie usuwaj tej reguły
+   bez sprawdzenia okładki. */
+table:has(th:nth-child(5)) td,
+table:has(th:nth-child(5)) th { font-size: 7.4pt; padding: 1.2mm 1.4mm; }
+
+/* ---------- cytat / myśl przewodnia ---------- */
+.pull {
+  margin: 6mm 4mm; padding-left: 5mm; border-left: 2.4pt solid var(--gold);
+  font-size: 11.4pt; line-height: 1.45; color: var(--accent-dk);
+  font-style: italic; page-break-inside: avoid;
+}
+
+/* ---------- podsumowanie rozdziału ---------- */
+.recap {
+  border-top: 1.6pt solid var(--gold); margin-top: 7mm; padding-top: 3.5mm;
+  page-break-inside: avoid;
+}
+.recap .bt {
+  font-family: "DejaVu Sans", sans-serif; font-size: 7.8pt; letter-spacing: 0.2em;
+  text-transform: uppercase; font-weight: 700; color: var(--gold); margin-bottom: 2.5mm;
+}
+.recap ul > li { font-size: 9.6pt; }
+
+/* ---------- pomocnicze ---------- */
+.nb { page-break-before: always; }
+.avoid { page-break-inside: avoid; }
+.small { font-size: 9pt; color: var(--muted); }
+.center { text-align: center; }
+.mono { font-family: "DejaVu Sans Mono", monospace; font-size: 8.6pt; }
+.tag {
+  display: inline-block; background: var(--cream-dp); color: var(--accent-dk);
+  font-family: "DejaVu Sans", sans-serif; font-size: 7.6pt; font-weight: 700;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 0.8mm 2mm; margin-right: 1.5mm; border-radius: 1mm;
+}
