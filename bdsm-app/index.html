@@ -12,9 +12,9 @@
 .nav button:hover,.nav button.active{background:#171f2d;border-color:#2b364a}.main{padding:26px;min-width:0}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:24px}
 h1{font-size:26px;margin:0}.muted{color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:17px}
 .card b{font-size:25px;display:block;margin-top:7px}.panel{margin-top:16px}.list{display:grid;gap:8px}.item{background:#0d131e;border:1px solid var(--line);border-radius:10px;padding:12px}
-.btn{background:#171f2d;border-color:#303b50;text-align:center}.btn:hover{background:#202a3a}.ok{color:#69d58a}.view{display:none}.view.active{display:block}
+.quick{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px}.quick .btn{text-align:center}.split{display:grid;grid-template-columns:1.25fr .75fr;gap:14px;margin-top:16px}.statline{display:flex;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid var(--line)}.statline:last-child{border-bottom:0}.badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#1b2433;color:#cbd5e1;font-size:12px}.btn{background:#171f2d;border-color:#303b50;text-align:center}.btn:hover{background:#202a3a}.ok{color:#69d58a}.view{display:none}.view.active{display:block}
 textarea,input,select{width:100%;background:#0c121c;border:1px solid #303b50;color:#fff;border-radius:9px;padding:10px}.row{display:flex;gap:8px;flex-wrap:wrap}.row>*{flex:1}
-@media(max-width:800px){.app{grid-template-columns:1fr}.side{position:static;border-right:0;border-bottom:1px solid var(--line)}.nav{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.main{padding:18px}}
+@media(max-width:800px){.quick,.split{grid-template-columns:1fr}.app{grid-template-columns:1fr}.side{position:static;border-right:0;border-bottom:1px solid var(--line)}.nav{grid-template-columns:repeat(2,1fr)}.grid{grid-template-columns:1fr}.main{padding:18px}}
 </style>
 </head>
 <body>
@@ -34,7 +34,16 @@ textarea,input,select{width:100%;background:#0c121c;border:1px solid #303b50;col
 <div class="card"><span class="muted">Zadania</span><b id="taskCount">0</b></div>
 <div class="card"><span class="muted">Uwagi</span><b id="noteCount">0</b></div>
 </div>
-<div class="card panel"><h3>Dzisiaj</h3><div id="todayList" class="list"></div></div>
+<div class="quick">
+<button class="btn" data-go="events">＋ Nowy wpis</button>
+<button class="btn" data-go="agenda">📅 Otwórz agendę</button>
+<button class="btn" id="quickBackup">↧ Kopia danych</button>
+</div>
+<div class="split">
+<div class="card"><h3>Dzisiaj <span id="todayBadge" class="badge">0</span></h3><div id="todayList" class="list"></div></div>
+<div class="card"><h3>Najbliższe</h3><div id="nextList" class="list"></div></div>
+</div>
+<div class="card panel"><h3>Status danych</h3><div class="statline"><span>Lokalne obszary danych</span><b id="dataAreas" style="font-size:16px;margin:0">0</b></div><div class="statline"><span>Ostatnia aktualizacja widoku</span><span id="lastRefresh" class="muted">—</span></div></div>
 </section>
 <section id="agenda" class="view"><div class="card"><h3>Agenda</h3><div id="agendaList" class="list"></div></div></section>
 <section id="events" class="view"><div class="card"><h3>Nowy wpis</h3><div class="row"><input id="eventTitle" placeholder="Tytuł"><input id="eventDate" type="datetime-local"></div><textarea id="eventNote" rows="3" placeholder="Notatka" style="margin-top:8px"></textarea><button id="addEvent" class="btn" style="margin-top:8px">Dodaj wpis</button></div><div class="card panel"><h3>Ostatnie wpisy</h3><div id="eventsList" class="list"></div></div></section>
@@ -54,16 +63,23 @@ function render(){
  const today=new Date().toISOString().slice(0,10);
  const todays=events.filter(x=>String(dateOf(x)).slice(0,10)===today).slice(-8);
  todayList.innerHTML=todays.length?todays.map(itemHtml).join(''):'<div class="muted">Brak wpisów na dziś.</div>';
+ todayBadge.textContent=todays.length;
  const upcoming=events.filter(x=>dateOf(x)&&new Date(dateOf(x))>=new Date(Date.now()-86400000)).sort((a,b)=>new Date(dateOf(a))-new Date(dateOf(b))).slice(0,20);
  agendaList.innerHTML=upcoming.length?upcoming.map(itemHtml).join(''):'<div class="muted">Brak nadchodzących wpisów.</div>';
+ nextList.innerHTML=upcoming.length?upcoming.slice(0,4).map(itemHtml).join(''):'<div class="muted">Brak zaplanowanych wpisów.</div>';
  eventsList.innerHTML=events.length?events.slice(-20).reverse().map(itemHtml).join(''):'<div class="muted">Brak wpisów.</div>';
  reportText.innerHTML='<p>Wpisy: <b>'+events.length+'</b> · Zadania: <b>'+tasks.length+'</b> · Uwagi: <b>'+notes.length+'</b></p>';
- storageInfo.textContent='Wykryto '+Object.keys(localStorage).filter(k=>k.startsWith('bdsm-app-')).length+' lokalnych obszarów danych.';
+ const areas=Object.keys(localStorage).filter(k=>k.startsWith('bdsm-app-')).length;
+ storageInfo.textContent='Wykryto '+areas+' lokalnych obszarów danych.';
+ dataAreas.textContent=areas;lastRefresh.textContent=new Date().toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'});
 }
 function itemHtml(x){const d=dateOf(x);return '<div class="item"><b>'+esc(x.title||x.name||x.type||'Wpis')+'</b><div class="muted">'+esc(d?new Date(d).toLocaleString('pl-PL'):'bez daty')+'</div>'+(x.note||x.description?'<div>'+esc(x.note||x.description)+'</div>':'')+'</div>'}
 document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-view]').forEach(x=>x.classList.remove('active'));b.classList.add('active');document.querySelectorAll('.view').forEach(x=>x.classList.remove('active'));document.getElementById(b.dataset.view).classList.add('active');title.textContent=b.textContent;render()});
+document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.querySelector('[data-view="'+b.dataset.go+'"]').click());
+const backup=()=>{const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('bdsm-app-'))data[k]=localStorage.getItem(k)}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bdsm-app-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+quickBackup.onclick=backup;
 addEvent.onclick=()=>{if(!eventTitle.value.trim())return alert('Wpisz tytuł.');const a=arr(KEYS.events);a.push({id:'e'+Date.now(),title:eventTitle.value.trim(),date:eventDate.value||new Date().toISOString(),note:eventNote.value.trim(),createdAt:new Date().toISOString()});save(KEYS.events,a);eventTitle.value='';eventNote.value='';render()};
-exportBtn.onclick=()=>{const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('bdsm-app-'))data[k]=localStorage.getItem(k)}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bdsm-app-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+exportBtn.onclick=backup;
 function net(){online.textContent=navigator.onLine?'● Online':'● Offline';online.className=navigator.onLine?'ok':'muted'}window.addEventListener('online',net);window.addEventListener('offline',net);net();render();
 </script>
 </body></html>
