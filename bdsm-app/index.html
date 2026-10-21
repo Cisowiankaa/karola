@@ -24,7 +24,7 @@ textarea,input,select{width:100%;background:#0c121c;border:1px solid #303b50;col
 <button data-view="agenda">Agenda</button>
 <button data-view="events">Wpisy</button>
 <button data-view="reports">Raporty</button>
-<button data-view="settings">Ustawienia</button>
+<button data-view="invites">Zaproszenia</button><button data-view="settings">Ustawienia</button>
 </nav></aside>
 <main class="main">
 <div class="top"><div><h1 id="title">Dashboard</h1><div class="muted">Lekka, stabilna wersja</div></div><div id="online" class="ok">● Online</div></div>
@@ -48,6 +48,7 @@ textarea,input,select{width:100%;background:#0c121c;border:1px solid #303b50;col
 <section id="agenda" class="view"><div class="card"><h3>Agenda</h3><div id="agendaList" class="list"></div></div></section>
 <section id="events" class="view"><div class="card"><h3>Nowy wpis</h3><div class="row"><input id="eventTitle" placeholder="Tytuł"><input id="eventDate" type="datetime-local"></div><textarea id="eventNote" rows="3" placeholder="Notatka" style="margin-top:8px"></textarea><button id="addEvent" class="btn" style="margin-top:8px">Dodaj wpis</button></div><div class="card panel"><h3>Ostatnie wpisy</h3><div id="eventsList" class="list"></div></div></section>
 <section id="reports" class="view"><div class="card"><h3>Raport lokalny</h3><p class="muted">Podsumowanie danych zapisanych w tej przeglądarce.</p><div id="reportText"></div></div></section>
+<section id="invites" class="view"><div class="card"><h3>Zaproszenia online</h3><p class="muted">Udostępnij link gościowi. Gość może tylko dodać wpis przez formularz — nie widzi prywatnych danych aplikacji.</p><input id="inviteLink" readonly value="https://bdsm-app-karolina.vercel.app/guest.html?invite=43d4c52e-d08e-49d2-a111-c60597487833"><div class="row" style="margin-top:8px"><button id="copyInvite" class="btn">Kopiuj link</button><button id="openInvite" class="btn">Otwórz formularz gościa</button></div><p class="muted">Zaproszenie aktywne do 20.11.2026.</p></div></section>
 <section id="settings" class="view"><div class="card"><h3>Dane i bezpieczeństwo</h3><p>Ta wersja nie usuwa istniejących danych z localStorage. Nowe wpisy używają dotychczasowego klucza zdarzeń.</p><button id="exportBtn" class="btn">Eksportuj kopię danych</button><p class="muted" id="storageInfo"></p></div></section>
 </main></div>
 <script>
@@ -78,6 +79,8 @@ document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>{document.quer
 document.querySelectorAll('[data-go]').forEach(b=>b.onclick=()=>document.querySelector('[data-view="'+b.dataset.go+'"]').click());
 const backup=()=>{const data={};for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith('bdsm-app-'))data[k]=localStorage.getItem(k)}const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bdsm-app-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 quickBackup.onclick=backup;
+copyInvite.onclick=async()=>{try{await navigator.clipboard.writeText(inviteLink.value);copyInvite.textContent='✓ Skopiowano';setTimeout(()=>copyInvite.textContent='Kopiuj link',1500)}catch{inviteLink.select();document.execCommand('copy')}};
+openInvite.onclick=()=>window.open(inviteLink.value,'_blank','noopener');
 addEvent.onclick=()=>{if(!eventTitle.value.trim())return alert('Wpisz tytuł.');const a=arr(KEYS.events);a.push({id:'e'+Date.now(),title:eventTitle.value.trim(),date:eventDate.value||new Date().toISOString(),note:eventNote.value.trim(),createdAt:new Date().toISOString()});save(KEYS.events,a);eventTitle.value='';eventNote.value='';render()};
 exportBtn.onclick=backup;
 function net(){online.textContent=navigator.onLine?'● Online':'● Offline';online.className=navigator.onLine?'ok':'muted'}window.addEventListener('online',net);window.addEventListener('offline',net);net();render();
